@@ -1,0 +1,3 @@
+[submodule "src/bladeGPS"]
+	path = src/bladeGPS
+	url = https://github.com/osqzss/bladeGPS.git
