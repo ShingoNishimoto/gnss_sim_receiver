@@ -28,6 +28,9 @@
  * Library for command-line handling.
  * \{ */
 
+// Parameters for bladeGPS simulator
+DECLARE_string(bladegps_args);
+DECLARE_string(bladeRF_serial);
 
 DECLARE_string(c);            //!< Path to the configuration file.
 DECLARE_string(config_file);  //!< Path to the configuration file.

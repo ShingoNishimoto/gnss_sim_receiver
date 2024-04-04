@@ -7,6 +7,7 @@
 
 add_subdirectory(algorithms)
 add_subdirectory(core)
+add_subdirectory(bladeGPS)
 add_subdirectory(main)
 if(ENABLE_UNIT_TESTING OR ENABLE_SYSTEM_TESTING)
     add_subdirectory(tests)

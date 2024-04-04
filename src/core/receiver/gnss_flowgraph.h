@@ -156,6 +156,11 @@ public:
      */
     void priorize_satellites(const std::vector<std::pair<int, Gnss_Satellite>>& visible_satellites);
 
+    /*!
+     * \brief Retrieve sig_source_ instance out of the class for hacking.
+     */
+    std::vector<std::shared_ptr<SignalSourceInterface>> get_sig_source() { return sig_source_;};
+
 #if ENABLE_FPGA
     void start_acquisition_helper();
 

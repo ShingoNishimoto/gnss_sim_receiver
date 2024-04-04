@@ -21,6 +21,9 @@
 #include <iostream>
 #include <string>
 
+// Parameters for bladeGPS simulator
+DEFINE_string(bladegps_args, "", "Command line parameteers passed through to bladeGPS.");
+DEFINE_string(bladeRF_serial, "", "Serial no. of bladeRF device.");
 
 DEFINE_string(c, "-", "Path to the configuration file (if set, overrides --config_file).");
 

@@ -4,7 +4,6 @@
 # SPDX-FileCopyrightText: 2010-2020 C. Fernandez-Prades cfernandez(at)cttc.es
 # SPDX-License-Identifier: BSD-3-Clause
 
-
 if(USE_CMAKE_TARGET_SOURCES)
     add_executable(gnss-sdr)
     target_sources(gnss-sdr PRIVATE main.cc)
@@ -21,8 +20,10 @@ target_link_libraries(gnss-sdr
         Gflags::gflags
         Glog::glog
         Threads::Threads
+        bladegps
+        bladeRF
 )
-
+set(CMAKE_EXE_LINKER_FLAGS "${PLATFORM_LDFLAGS} -L ${CMAKE_BINARY_DIR}/src/bladeGPS/libbladegps.so -L/usr/local/lib -lbladeRF")
 target_compile_definitions(gnss-sdr PRIVATE -DGNSS_SDR_VERSION="${VERSION}")
 
 if(ENABLE_CUDA)

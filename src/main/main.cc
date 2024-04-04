@@ -42,6 +42,14 @@
 #include <memory>                                      // for unique_ptr
 #include <string>                                      // for string
 
+#include "main.h"
+#include "gnss_flowgraph.h"
+#include "signal_source_interface.h"
+#include "../algorithms/signal_source/adapters/osmosdr_signal_source.h"
+#include "gnss_sdr_flags.h"
+#include <libbladeRF.h>
+#include <unistd.h>
+
 #if CUDA_GPU_ACCEL
 // For the CUDA runtime routines (prefixed with "cuda_")
 #include <cuda_runtime.h>
@@ -62,6 +70,39 @@ using namespace google;
 // For GPS NAVIGATION (L1)
 Concurrent_Queue<Gps_Acq_Assist> global_gps_acq_assist_queue;
 Concurrent_Map<Gps_Acq_Assist> global_gps_acq_assist_map;
+
+int bladegps_thread(bladerf* dev, std::string args)
+{
+    std::string bladegps_args_ = args;
+    char *bladegps_argv_[20] = {"bladegps", NULL, };
+    int bladegps_argc_ = 1;
+    char workstr[1024];
+    {
+        strcpy(workstr, bladegps_args_.c_str());
+        char *context;
+        char *token = strtok_r(workstr, " ", &context);
+        while (token)
+        {
+            bladegps_argv_[bladegps_argc_ ++] = token;
+            token = strtok_r(NULL, " ", &context);
+        }
+    }
+    printf("Running bladeGPS with parameter:'%s'.\n", args.c_str());
+    bladegps_main(dev, bladegps_argc_, bladegps_argv_);
+    gflags::ShutDownCommandLineFlags();
+}
+
+int bladerffire_thread(bladerf* dev, bladerf_trigger *trig, int sec, boost::thread* bladegps_thread)
+{
+    printf("Waiting...");
+    sleep(sec);
+    printf("Fire!!\n");
+    int error = bladerf_trigger_fire(dev, trig);
+    bladegps_thread->join();
+    exit(0);
+}
+
+std::shared_ptr<OsmosdrSignalSource> osmo_sig_src;
 
 int main(int argc, char** argv)
 {
@@ -143,7 +184,25 @@ int main(int argc, char** argv)
     int return_code = 0;
     try
         {
+            std::cout << "Waiting..." << std::endl;
+            sleep(5); // 1 sec.
+
             auto control_thread = std::make_unique<ControlThread>();
+
+            std::shared_ptr<GNSSFlowgraph> flowgraph_ = control_thread->flowgraph();
+            std::vector<std::shared_ptr<SignalSourceInterface>> sig_src = flowgraph_.get()->get_sig_source();
+            osmo_sig_src = std::dynamic_pointer_cast<OsmosdrSignalSource>(sig_src[0]);
+            bladerf *bladerf_dev = (bladerf*)osmo_sig_src.get()->get_devptr();
+
+            if (FLAGS_bladegps_args != "")
+            {
+                std::cout << "... Executing bladegps_main() with an independent thread." << std::endl;
+                fLS::clstring argstring = FLAGS_bladegps_args;
+                boost::thread* th_bladegps = new boost::thread(boost::bind(bladegps_thread, bladerf_dev, argstring));
+
+                std::cout << "Waiting..." << std::endl;
+                sleep(5);
+            }
             // record startup time
             start = std::chrono::system_clock::now();
             return_code = control_thread->run();

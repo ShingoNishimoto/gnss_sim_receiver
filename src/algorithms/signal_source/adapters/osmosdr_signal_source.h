@@ -60,6 +60,8 @@ public:
     void disconnect(gr::top_block_sptr top_block) override;
     gr::basic_block_sptr get_left_block() override;
     gr::basic_block_sptr get_right_block() override;
+    osmosdr::source::sptr get_osmosdr_dev();
+    void *get_devptr();
 
 private:
     void driver_instance();
