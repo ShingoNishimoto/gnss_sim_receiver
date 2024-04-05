@@ -795,6 +795,9 @@ typedef struct
     lexeph_t lexeph[MAXSAT];      /* LEX ephemeris */
     lexion_t lexion;              /* LEX ionosphere correction */
     pppcorr_t pppcorr;            /* ppp corrections */
+
+    // FIXME: need to be able to update.
+    double rec_ant_dir[2];        /* receier antenna direction (Azimuth, Elevation) [rad] in enu frame*/
 } nav_t;
 
 

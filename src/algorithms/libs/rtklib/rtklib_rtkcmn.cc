@@ -2340,6 +2340,23 @@ void ecef2enu(const double *pos, const double *r, double *e)
     matmul("NN", 3, 1, 3, 1.0, E, r, 0.0, e);
 }
 
+/* transform enu vector to antenna fixed local tangental coordinate -------------------------
+ * transform enu vector to antenna fixed local tangental coordinate
+ * args   : double *enu         I   vector in enu {East,North, Up} (m)
+ *          double *rec_ant_att I   receiver antenna direction in enu frame {azimuth,elevation} (rad)
+ *          double *enu_ant     O   vector in local tangental coordinate {e,n,u}_antenna
+ * return : none
+ *-----------------------------------------------------------------------------*/
+void enu2ant(const double *enu, const double *rec_ant_att, double *enu_ant)
+{
+    double E[9];
+    double rec_ant_att_latlon[2];
+    rec_ant_att_latlon[0] = rec_ant_att[1];
+    rec_ant_att_latlon[1] = rec_ant_att[0];
+
+    xyz2enu(rec_ant_att_latlon, E);
+    matmul("NN", 3, 1, 3, 1.0, E, enu, 0.0, enu_ant);
+}
 
 /* transform local vector to ecef coordinate -----------------------------------
  * transform local tangental coordinate vector to ecef
@@ -4367,27 +4384,30 @@ double geodist(const double *rs, const double *rr, double *e)
 
 /* satellite azimuth/elevation angle -------------------------------------------
  * compute satellite azimuth/elevation angle
- * args   : double *pos      I   geodetic position {lat,lon,h} (rad,m)
- *          double *e        I   receiver-to-satellilte unit vector (ecef)
- *          double *azel     IO  azimuth/elevation {az,el} (rad) (NULL: no output)
+ * args   : double *pos          I   geodetic position {lat,lon,h} (rad,m)
+ *          double *e            I   receiver-to-satellilte unit vector (ecef)
+ *          double *rec_ant_att  I   receiver antenna direction {azimuth, elevation} [rad] (enu)
+ *          double *azel         IO  azimuth/elevation {az,el} (rad) (NULL: no output)
  *                               (0.0<=azel[0]<2*pi,-pi/2<=azel[1]<=pi/2)
  * return : elevation angle (rad)
  *-----------------------------------------------------------------------------*/
-double satazel(const double *pos, const double *e, double *azel)
+double satazel(const double *pos, const double *e, const double *rec_ant_att, double *azel)
 {
     double az = 0.0;
     double el = GNSS_PI / 2.0;
-    double enu[3];
+    double enu[3], enu_ant[3];
 
     if (pos[2] > -RE_WGS84)
         {
             ecef2enu(pos, e, enu);
-            az = dot(enu, enu, 2) < 1e-12 ? 0.0 : atan2(enu[0], enu[1]);
+            // TODO: enu_ant.
+            enu2ant(enu, rec_ant_att, enu_ant);
+            az = dot(enu_ant, enu_ant, 2) < 1e-12 ? 0.0 : atan2(enu_ant[0], enu_ant[1]);
             if (az < 0.0)
                 {
                     az += 2 * GNSS_PI;
                 }
-            el = asin(enu[2]);
+            el = asin(enu_ant[2]);
         }
     if (azel)
         {

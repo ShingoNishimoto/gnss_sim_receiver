@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <map>
 #include <string>
+#include "MATH_CONSTANTS.h"
 
 /** \addtogroup PVT
  * \{ */
@@ -95,6 +96,7 @@ public:
     bool use_e6_for_pvt = true;
     bool use_has_corrections = true;
     bool use_unhealthy_sats = false;
+    bool rec_antenna_attitude_fix = true;
 
     // PVT KF parameters
     bool enable_pvt_kf = false;
@@ -102,6 +104,10 @@ public:
     double measures_ecef_vel_sd_ms = 0.1;
     double system_ecef_pos_sd_m = 0.01;
     double system_ecef_vel_sd_ms = 0.001;
+
+    // Receiver antenna attitude
+    double ini_rec_antenna_az_rad = 0 * D2R;
+    double ini_rec_antenna_el_rad = 90 * D2R;
 };
 
 

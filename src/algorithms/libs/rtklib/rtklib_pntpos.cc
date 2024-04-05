@@ -463,7 +463,7 @@ int rescode(int iter, const obsd_t *obs, int n, const double *rs,
                     trace(4, "geodist error\n");
                     continue;
                 }
-            double elaux = satazel(pos, e, azel + i * 2);
+            double elaux = satazel(pos, e, nav->rec_ant_dir, azel + i * 2);
             if (elaux < opt->elmin)
                 {
                     trace(4, "satazel error. el = %lf , elmin = %lf\n", elaux, opt->elmin);

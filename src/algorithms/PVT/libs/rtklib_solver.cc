@@ -1499,6 +1499,17 @@ bool Rtklib_Solver::get_PVT(const std::map<int, Gnss_Synchro> &gnss_observables_
                         }
                 }
 
+            // Update attitude of receiver antenna
+            if (d_conf.rec_antenna_attitude_fix)
+            {
+                d_nav_data.rec_ant_dir[0] = d_conf.ini_rec_antenna_az_rad;
+                d_nav_data.rec_ant_dir[1] = d_conf.ini_rec_antenna_el_rad;
+            }
+            else
+            {
+                // FIXME: bring from outside
+            }
+
             result = rtkpos(&d_rtk, d_obs_data.data(), valid_obs + glo_valid_obs, &d_nav_data);
 
             if (result == 0)

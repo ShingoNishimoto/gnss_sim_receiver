@@ -81,6 +81,11 @@ Rtklib_Pvt::Rtklib_Pvt(const ConfigurationInterface* configuration,
     pvt_output_parameters.system_ecef_pos_sd_m = configuration->property(role + ".kf_system_ecef_pos_sd_m", 2.0);
     pvt_output_parameters.system_ecef_vel_sd_ms = configuration->property(role + ".kf_system_ecef_vel_sd_ms", 0.5);
 
+    // Receiver attitude settings
+    pvt_output_parameters.rec_antenna_attitude_fix = configuration->property("ReceiverAntennaAttitude.fix", true);
+    pvt_output_parameters.ini_rec_antenna_az_rad = configuration->property("ReceiverAntennaAttitude.az_deg", 0.0) * D2R;
+    pvt_output_parameters.ini_rec_antenna_el_rad = configuration->property("ReceiverAntennaAttitude.el_deg", 90.0) * D2R;
+
     // NMEA Printer settings
     pvt_output_parameters.flag_nmea_tty_port = configuration->property(role + ".flag_nmea_tty_port", false);
     pvt_output_parameters.nmea_dump_filename = configuration->property(role + ".nmea_dump_filename", default_nmea_dump_filename);

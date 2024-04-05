@@ -1349,7 +1349,7 @@ int zdres(int base, const obsd_t *obs, int n, const double *rs,
                 {
                     continue;
                 }
-            if (satazel(pos, e + i * 3, azel + i * 2) < opt->elmin)
+            if (satazel(pos, e + i * 3, nav->rec_ant_dir, azel + i * 2) < opt->elmin)
                 {
                     continue;
                 }
