@@ -443,7 +443,7 @@ TEST(RTKLibSolverTest, test1)
 
     // solve
     bool pvt_valid = false;
-    if (d_ls_pvt->get_PVT(gnss_synchro_map, false))
+    if (d_ls_pvt->get_PVT(gnss_synchro_map, false, false))
         {
             // DEBUG MESSAGE: Display position in console output
             if (d_ls_pvt->is_valid_position())

@@ -17,7 +17,8 @@ cmake-build-debug/
 /install
 .DS_Store
 .pydevproject
-.vscode/
+.vscode/*
 .vs/
 Testing/
 test/
+!.vscode/launch.json

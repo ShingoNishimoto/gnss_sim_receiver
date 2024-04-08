@@ -54,6 +54,7 @@ public:
 
     uint32_t type_of_receiver = 0;
     uint32_t observable_interval_ms = 20;
+    uint32_t output_cnt_for_clk_prop_after_fix = 0;
 
     int32_t output_rate_ms = 0;
     int32_t display_rate_ms = 0;
@@ -88,6 +89,7 @@ public:
     bool monitor_ephemeris_enabled = false;
     bool protobuf_enabled = true;
     bool enable_rx_clock_correction = true;
+    bool enable_rx_clock_propagation = false;
     bool show_local_time_zone = false;
     bool pre_2009_file = false;
     bool dump = false;

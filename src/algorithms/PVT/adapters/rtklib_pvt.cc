@@ -841,7 +841,8 @@ Rtklib_Pvt::Rtklib_Pvt(const ConfigurationInterface* configuration,
         {{}, {{}, {}}, {{}, {}}, {}, {}},                                                  /* exterr_t exterr   extended receiver error model */
         0,                                                                                 /* disable L2-AR */
         {},                                                                                /* char pppopt[256]   ppp option   "-GAP_RESION="  default gap to reset iono parameters (ep) */
-        bancroft_init                                                                      /* enable Bancroft initialization for the first iteration of the PVT computation, useful in some geometries */
+        bancroft_init,                                                                      /* enable Bancroft initialization for the first iteration of the PVT computation, useful in some geometries */
+        false                                                                               /* enable clock bias fixed mode, when enable_rx_clock_propagation is enable, it will be enable after fixing position and clock bias */
     };
 
     rtkinit(&rtk, &rtklib_configuration_options);
@@ -891,6 +892,10 @@ Rtklib_Pvt::Rtklib_Pvt(const ConfigurationInterface* configuration,
 
     // Set maximum clock offset allowed if pvt_output_parameters.enable_rx_clock_correction = false
     pvt_output_parameters.max_obs_block_rx_clock_offset_ms = configuration->property(role + ".max_clock_offset_ms", pvt_output_parameters.max_obs_block_rx_clock_offset_ms);
+
+    // Enable or disable clock propagation mode after fixing position and clock
+    pvt_output_parameters.enable_rx_clock_propagation = configuration->property(role + ".enable_rx_clock_propagation", false);
+    pvt_output_parameters.output_cnt_for_clk_prop_after_fix = configuration->property(role + ".output_cnt_for_clk_prop_after_fix", 0);
 
     // Source timetag
     pvt_output_parameters.log_source_timetag = configuration->property(role + ".log_timetag", pvt_output_parameters.log_source_timetag);

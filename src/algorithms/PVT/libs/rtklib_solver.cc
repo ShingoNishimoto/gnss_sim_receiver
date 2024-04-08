@@ -902,7 +902,7 @@ void Rtklib_Solver::get_current_has_obs_correction(const std::string &signal, ui
 }
 
 
-bool Rtklib_Solver::get_PVT(const std::map<int, Gnss_Synchro> &gnss_observables_map, double kf_update_interval_s)
+bool Rtklib_Solver::get_PVT(const std::map<int, Gnss_Synchro> &gnss_observables_map, double kf_update_interval_s, bool flag_clock_prop)
 {
     std::map<int, Gnss_Synchro>::const_iterator gnss_observables_iter;
     std::map<int, Galileo_Ephemeris>::const_iterator galileo_ephemeris_iter;
@@ -912,6 +912,8 @@ bool Rtklib_Solver::get_PVT(const std::map<int, Gnss_Synchro> &gnss_observables_
     std::map<int, Beidou_Dnav_Ephemeris>::const_iterator beidou_ephemeris_iter;
 
     const Glonass_Gnav_Utc_Model &gnav_utc = this->glonass_gnav_utc_model;
+
+    d_rtk.opt.clock_bias_fixed = flag_clock_prop;
 
     // ********************************************************************************
     // ****** PREPARE THE DATA (SV EPHEMERIS AND OBSERVATIONS) ************************

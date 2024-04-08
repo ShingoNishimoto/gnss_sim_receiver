@@ -2662,6 +2662,7 @@ void rtkinit(rtk_t *rtk, const prcopt_t *opt)
         {
             rtk->rb[i] = 0.0;
         }
+    // FIXME: nx in clock bias fixed mode for PPP algorithm
     rtk->nx = opt->mode <= PMODE_FIXED ? NX_RTK(opt) : pppnx(opt);
     rtk->na = opt->mode <= PMODE_FIXED ? NR_RTK(opt) : pppnx(opt);
     rtk->tt = 0.0;
