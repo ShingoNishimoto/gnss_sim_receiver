@@ -2239,12 +2239,12 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                         {
                             if (d_enable_rx_clock_propagation && output_cnt_after_fix >= d_output_cnt_for_clk_prop_after_fix)
                                 {
-                                    flag_pvt_valid = d_internal_pvt_solver->get_PVT(d_gnss_observables_map, d_output_rate_ms / 1000.0, true);
+                                    flag_pvt_valid = d_user_pvt_solver->get_PVT(d_gnss_observables_map, d_output_rate_ms / 1000.0, true);
                                     d_enable_rx_clock_correction = false;
                                 }
                             else
                                 {
-                                    flag_pvt_valid = d_internal_pvt_solver->get_PVT(d_gnss_observables_map, d_output_rate_ms / 1000.0, false);
+                                    flag_pvt_valid = d_user_pvt_solver->get_PVT(d_gnss_observables_map, d_output_rate_ms / 1000.0, false);
                                 }
                             // flag_pvt_valid = d_user_pvt_solver->get_PVT(d_gnss_observables_map, d_output_rate_ms / 1000.0);
                         }
