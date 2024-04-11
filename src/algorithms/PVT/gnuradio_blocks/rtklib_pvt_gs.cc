@@ -2246,7 +2246,10 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                                 {
                                     flag_pvt_valid = d_user_pvt_solver->get_PVT(d_gnss_observables_map, d_output_rate_ms / 1000.0, false);
                                 }
-                            // flag_pvt_valid = d_user_pvt_solver->get_PVT(d_gnss_observables_map, d_output_rate_ms / 1000.0);
+
+                            // count up
+                            if (flag_pvt_valid && d_enable_rx_clock_propagation &&output_cnt_after_fix < d_output_cnt_for_clk_prop_after_fix)
+                                        output_cnt_after_fix++;
                         }
 
                     if (flag_pvt_valid == true)
@@ -2270,10 +2273,6 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                                 }
                             else
                                 {
-                                    // FIXME: maybe not working correctly.
-                                    if (d_enable_rx_clock_propagation &&output_cnt_after_fix < d_output_cnt_for_clk_prop_after_fix)
-                                        output_cnt_after_fix++;
-
                                     DLOG(INFO) << "Rx clock offset at interpolated RX time: " << Rx_clock_offset_s * 1000.0 << "[s]"
                                                << " at RX time: " << static_cast<uint32_t>(d_rx_time * 1000.0) << " [ms]";
                                     // Optional debug code: export observables snapshot for rtklib unit testing
