@@ -13,11 +13,11 @@
 %
 
 %% Configuration
-path = '/home/dmiralles/Documents/gnss-sdr/';
-file = 'bds_acq';
-sat = 6;
+path = '/home/junichiro/work/gnss-sdr/test/';
+file = 'acq_dump';
+sat = 7;
 channel = 0;
-execution = 4;
+execution = 1;
 % Signal:
 %     1 GPS  L1
 %     2 GPS  L2M
@@ -30,7 +30,7 @@ execution = 4;
 %     9 BDS. B3
 %    10 BDS. B2a
 
-signal_type = 8;
+signal_type = 1;
 
 %%% True for light grid representation
 lite_view = true;
@@ -38,6 +38,9 @@ lite_view = true;
 %%% If lite_view, it sets the number of samples per chip in the graphical representation
 n_samples_per_chip = 3;
 d_samples_per_code = 25000;
+
+
+
 
 %% Load data
 
@@ -111,13 +114,13 @@ zlabel('Test Statistics')
 %--- Acquisition grid (2D)
 figure(2)
 subplot(2,1,1)
-plot(freq, acq_grid(d_max, :))
+normalization = (d_samples_per_code^4) * input_power;
+plot(freq, acq_grid(d_max, :)./normalization)
 xlim([min(freq) max(freq)])
 xlabel('Doppler shift (Hz)')
 ylabel('Test statistics')
 title(['Fixed code delay to ' num2str((d_max - 1) / n_fft * n_chips) ' chips'])
 subplot(2,1,2)
-normalization = (d_samples_per_code^4) * input_power;
 plot(delay, acq_grid(:, f_max)./normalization)
 xlim([min(delay) max(delay)])
 xlabel('Code delay (chips)')
