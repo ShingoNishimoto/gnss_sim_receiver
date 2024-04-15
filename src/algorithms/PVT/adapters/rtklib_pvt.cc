@@ -81,6 +81,11 @@ Rtklib_Pvt::Rtklib_Pvt(const ConfigurationInterface* configuration,
     pvt_output_parameters.system_ecef_pos_sd_m = configuration->property(role + ".kf_system_ecef_pos_sd_m", 2.0);
     pvt_output_parameters.system_ecef_vel_sd_ms = configuration->property(role + ".kf_system_ecef_vel_sd_ms", 0.5);
 
+    // Receiver attitude settings
+    pvt_output_parameters.rec_antenna_attitude_fix = configuration->property("ReceiverAntennaAttitude.fix", true);
+    pvt_output_parameters.ini_rec_antenna_az_rad = configuration->property("ReceiverAntennaAttitude.az_deg", 0.0) * D2R;
+    pvt_output_parameters.ini_rec_antenna_el_rad = configuration->property("ReceiverAntennaAttitude.el_deg", 90.0) * D2R;
+
     // NMEA Printer settings
     pvt_output_parameters.flag_nmea_tty_port = configuration->property(role + ".flag_nmea_tty_port", false);
     pvt_output_parameters.nmea_dump_filename = configuration->property(role + ".nmea_dump_filename", default_nmea_dump_filename);
@@ -836,7 +841,8 @@ Rtklib_Pvt::Rtklib_Pvt(const ConfigurationInterface* configuration,
         {{}, {{}, {}}, {{}, {}}, {}, {}},                                                  /* exterr_t exterr   extended receiver error model */
         0,                                                                                 /* disable L2-AR */
         {},                                                                                /* char pppopt[256]   ppp option   "-GAP_RESION="  default gap to reset iono parameters (ep) */
-        bancroft_init                                                                      /* enable Bancroft initialization for the first iteration of the PVT computation, useful in some geometries */
+        bancroft_init,                                                                      /* enable Bancroft initialization for the first iteration of the PVT computation, useful in some geometries */
+        false                                                                               /* enable clock bias fixed mode, when enable_rx_clock_propagation is enable, it will be enable after fixing position and clock bias */
     };
 
     rtkinit(&rtk, &rtklib_configuration_options);
@@ -886,6 +892,10 @@ Rtklib_Pvt::Rtklib_Pvt(const ConfigurationInterface* configuration,
 
     // Set maximum clock offset allowed if pvt_output_parameters.enable_rx_clock_correction = false
     pvt_output_parameters.max_obs_block_rx_clock_offset_ms = configuration->property(role + ".max_clock_offset_ms", pvt_output_parameters.max_obs_block_rx_clock_offset_ms);
+
+    // Enable or disable clock propagation mode after fixing position and clock
+    pvt_output_parameters.enable_rx_clock_propagation = configuration->property(role + ".enable_rx_clock_propagation", false);
+    pvt_output_parameters.output_cnt_for_clk_prop_after_fix = configuration->property(role + ".output_cnt_for_clk_prop_after_fix", 0);
 
     // Source timetag
     pvt_output_parameters.log_source_timetag = configuration->property(role + ".log_timetag", pvt_output_parameters.log_source_timetag);

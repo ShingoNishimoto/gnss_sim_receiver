@@ -176,6 +176,8 @@ rtklib_pvt_gs::rtklib_pvt_gs(uint32_t nchannels,
       d_flag_monitor_ephemeris_enabled(conf_.monitor_ephemeris_enabled),
       d_show_local_time_zone(conf_.show_local_time_zone),
       d_enable_rx_clock_correction(conf_.enable_rx_clock_correction),
+      d_enable_rx_clock_propagation(conf_.enable_rx_clock_propagation),
+      d_output_cnt_for_clk_prop_after_fix(conf_.output_cnt_for_clk_prop_after_fix),
       d_an_printer_enabled(conf_.an_output_enabled),
       d_log_timetag(conf_.log_source_timetag),
       d_use_has_corrections(conf_.use_has_corrections),
@@ -2100,14 +2102,28 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
 
             // ############ 2 COMPUTE THE PVT ################################
             bool flag_pvt_valid = false;
+            static uint32_t output_cnt_after_fix = 0;
             if (d_gnss_observables_map.empty() == false)
                 {
                     // LOG(INFO) << "diff raw obs time: " << d_gnss_observables_map.cbegin()->second.RX_time * 1000.0 - old_time_debug;
                     // old_time_debug = d_gnss_observables_map.cbegin()->second.RX_time * 1000.0;
                     uint32_t current_RX_time_ms = 0;
-                    // #### solve PVT and store the corrected observable set
-                    if (d_internal_pvt_solver->get_PVT(d_gnss_observables_map, d_observable_interval_ms / 1000.0))
+                    bool pvt_result;
+                    if (d_enable_rx_clock_propagation && output_cnt_after_fix >= d_output_cnt_for_clk_prop_after_fix)
                         {
+                            pvt_result = d_internal_pvt_solver->get_PVT(d_gnss_observables_map, d_observable_interval_ms / 1000.0, true);
+                            d_enable_rx_clock_correction = false;
+                        }
+                    else
+                        {
+                            pvt_result = d_internal_pvt_solver->get_PVT(d_gnss_observables_map, d_observable_interval_ms / 1000.0, false);
+                        }
+                    // #### solve PVT and store the corrected observable set
+                    if (pvt_result)
+                        {
+                            // if (d_enable_rx_clock_propagation && output_cnt_after_fix < d_output_cnt_for_clk_prop_after_fix)
+                            //     output_cnt_after_fix++;
+
                             d_pvt_errors_counter = 0;  // Reset consecutive PVT error counter
                             const double Rx_clock_offset_s = d_internal_pvt_solver->get_time_offset_s();
 
@@ -2214,13 +2230,26 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                                     this->message_port_pub(pmt::mp("pvt_to_observables"), pmt::make_any(command));
                                     LOG(INFO) << "PVT: Number of consecutive position solver error reached, Sent reset to observables.";
                                     d_pvt_errors_counter = 0;
+                                    output_cnt_after_fix = 0;
                                 }
                         }
 
                     // compute on the fly PVT solution
                     if (flag_compute_pvt_output == true)
                         {
-                            flag_pvt_valid = d_user_pvt_solver->get_PVT(d_gnss_observables_map, d_output_rate_ms / 1000.0);
+                            if (d_enable_rx_clock_propagation && output_cnt_after_fix >= d_output_cnt_for_clk_prop_after_fix)
+                                {
+                                    flag_pvt_valid = d_user_pvt_solver->get_PVT(d_gnss_observables_map, d_output_rate_ms / 1000.0, true);
+                                    d_enable_rx_clock_correction = false;
+                                }
+                            else
+                                {
+                                    flag_pvt_valid = d_user_pvt_solver->get_PVT(d_gnss_observables_map, d_output_rate_ms / 1000.0, false);
+                                }
+
+                            // count up
+                            if (flag_pvt_valid && d_enable_rx_clock_propagation &&output_cnt_after_fix < d_output_cnt_for_clk_prop_after_fix)
+                                        output_cnt_after_fix++;
                         }
 
                     if (flag_pvt_valid == true)
@@ -2406,7 +2435,9 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                                 << " using " << d_user_pvt_solver->get_num_valid_observations() << " observations is Lat = "
                                 << std::fixed << std::setprecision(6) << d_user_pvt_solver->get_latitude()
                                 << " [deg], Long = " << d_user_pvt_solver->get_longitude() << " [deg], Height = "
-                                << std::fixed << std::setprecision(2) << d_user_pvt_solver->get_height() << std::setprecision(ss) << " [m]" << TEXT_RESET << std::endl;
+                                << std::fixed << std::setprecision(2) << d_user_pvt_solver->get_height() << " [m], RX clock offset = "
+                                << std::fixed << std::setprecision(6) << d_user_pvt_solver->get_time_offset_s() * 1000.0 << "[ms]"
+                                << std::setprecision(ss) << TEXT_RESET << std::endl;
                             DLOG(INFO) << "RX clock offset: " << d_user_pvt_solver->get_time_offset_s() << "[s]";
 
                             std::cout

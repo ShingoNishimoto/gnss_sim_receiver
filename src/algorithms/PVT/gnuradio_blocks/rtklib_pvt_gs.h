@@ -258,6 +258,7 @@ private:
     uint32_t d_type_of_rx;
     uint32_t d_observable_interval_ms;
     uint32_t d_pvt_errors_counter;
+    uint32_t d_output_cnt_for_clk_prop_after_fix;
 
     bool d_dump;
     bool d_dump_mat;
@@ -273,6 +274,7 @@ private:
     bool d_flag_monitor_ephemeris_enabled;
     bool d_show_local_time_zone;
     bool d_enable_rx_clock_correction;
+    bool d_enable_rx_clock_propagation;
     bool d_enable_has_messages;
     bool d_an_printer_enabled;
     bool d_log_timetag;

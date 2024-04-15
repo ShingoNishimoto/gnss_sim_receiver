@@ -902,7 +902,7 @@ void Rtklib_Solver::get_current_has_obs_correction(const std::string &signal, ui
 }
 
 
-bool Rtklib_Solver::get_PVT(const std::map<int, Gnss_Synchro> &gnss_observables_map, double kf_update_interval_s)
+bool Rtklib_Solver::get_PVT(const std::map<int, Gnss_Synchro> &gnss_observables_map, double kf_update_interval_s, bool flag_clock_prop)
 {
     std::map<int, Gnss_Synchro>::const_iterator gnss_observables_iter;
     std::map<int, Galileo_Ephemeris>::const_iterator galileo_ephemeris_iter;
@@ -912,6 +912,8 @@ bool Rtklib_Solver::get_PVT(const std::map<int, Gnss_Synchro> &gnss_observables_
     std::map<int, Beidou_Dnav_Ephemeris>::const_iterator beidou_ephemeris_iter;
 
     const Glonass_Gnav_Utc_Model &gnav_utc = this->glonass_gnav_utc_model;
+
+    d_rtk.opt.clock_bias_fixed = flag_clock_prop;
 
     // ********************************************************************************
     // ****** PREPARE THE DATA (SV EPHEMERIS AND OBSERVATIONS) ************************
@@ -1498,6 +1500,17 @@ bool Rtklib_Solver::get_PVT(const std::map<int, Gnss_Synchro> &gnss_observables_
                             d_nav_data.lam[i][j] = satwavelen(i + 1, d_rtklib_freq_index[j], &d_nav_data);
                         }
                 }
+
+            // Update attitude of receiver antenna
+            if (d_conf.rec_antenna_attitude_fix)
+            {
+                d_nav_data.rec_ant_dir[0] = d_conf.ini_rec_antenna_az_rad;
+                d_nav_data.rec_ant_dir[1] = d_conf.ini_rec_antenna_el_rad;
+            }
+            else
+            {
+                // FIXME: bring from outside
+            }
 
             result = rtkpos(&d_rtk, d_obs_data.data(), valid_obs + glo_valid_obs, &d_nav_data);
 

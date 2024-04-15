@@ -24,6 +24,7 @@
 #include <glog/logging.h>
 #include <gnuradio/blocks/file_sink.h>
 #include <iostream>
+#include <utility>
 
 
 using namespace std::string_literals;
@@ -90,11 +91,12 @@ OsmosdrSignalSource::OsmosdrSignalSource(const ConfigurationInterface* configura
                 }
             else
                 {
-                    osmosdr_source_->set_gain_mode(false);
-                    osmosdr_source_->set_gain(gain_, 0);
-                    osmosdr_source_->set_if_gain(rf_gain_, 0);
-                    osmosdr_source_->set_bb_gain(if_gain_, 0);
-                    if (!osmosdr_args_.empty() && (osmosdr_args_.find("bladerf") != std::string::npos))
+                    bool actual_agc_mode = osmosdr_source_->set_gain_mode(false);
+                    double actual_gain = osmosdr_source_->set_gain(gain_, 0);
+                    // osmosdr_source_->set_if_gain(rf_gain_, 0);
+                    // osmosdr_source_->set_bb_gain(if_gain_, 0);
+                    // if (!osmosdr_args_.empty() && (osmosdr_args_.find("bladerf") != std::string::npos))
+                    if (0)
                         {
                             std::cout << "Actual LNA Gain: " << osmosdr_source_->get_gain("LNA", 0) << " dB...\n";
                             std::cout << "Actual VGA1 Gain: " << osmosdr_source_->get_gain("VGA1", 0) << " dB...\n";
@@ -237,4 +239,14 @@ gr::basic_block_sptr OsmosdrSignalSource::get_right_block()
         {
             return osmosdr_source_;
         }
+}
+
+osmosdr::source::sptr OsmosdrSignalSource::get_osmosdr_dev()
+{
+    return osmosdr_source_;
+}
+
+void* OsmosdrSignalSource::get_devptr()
+{
+    return osmosdr_source_->get_devptr();
 }

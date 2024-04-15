@@ -428,6 +428,9 @@ int rescode(int iter, const obsd_t *obs, int n, const double *rs,
     int nv = 0;
     int sys;
     int mask[4] = {0};
+    int nx = NX;
+    if (opt->clock_bias_fixed)
+        nx = 3; // only position
 
     trace(3, "resprng : n=%d\n", n);
 
@@ -463,7 +466,7 @@ int rescode(int iter, const obsd_t *obs, int n, const double *rs,
                     trace(4, "geodist error\n");
                     continue;
                 }
-            double elaux = satazel(pos, e, azel + i * 2);
+            double elaux = satazel(pos, e, nav->rec_ant_dir, azel + i * 2);
             if (elaux < opt->elmin)
                 {
                     trace(4, "satazel error. el = %lf , elmin = %lf\n", elaux, opt->elmin);
@@ -507,28 +510,28 @@ int rescode(int iter, const obsd_t *obs, int n, const double *rs,
             v[nv] = P - (r + dtr - SPEED_OF_LIGHT_M_S * dts[i * 2] + dion + dtrp);
 
             /* design matrix */
-            for (j = 0; j < NX; j++)
+            for (j = 0; j < nx; j++)
                 {
-                    H[j + nv * NX] = j < 3 ? -e[j] : (j == 3 ? 1.0 : 0.0);
+                    H[j + nv * nx] = j < 3 ? -e[j] : (j == 3 ? 1.0 : 0.0);
                 }
 
             /* time system and receiver bias offset correction */
             if (sys == SYS_GLO)
                 {
                     v[nv] -= x[4];
-                    H[4 + nv * NX] = 1.0;
+                    H[4 + nv * nx] = 1.0;
                     mask[1] = 1;
                 }
             else if (sys == SYS_GAL)
                 {
                     v[nv] -= x[5];
-                    H[5 + nv * NX] = 1.0;
+                    H[5 + nv * nx] = 1.0;
                     mask[2] = 1;
                 }
             else if (sys == SYS_BDS)
                 {
                     v[nv] -= x[6];
-                    H[6 + nv * NX] = 1.0;
+                    H[6 + nv * nx] = 1.0;
                     mask[3] = 1;
                 }
             else
@@ -554,9 +557,9 @@ int rescode(int iter, const obsd_t *obs, int n, const double *rs,
                     continue;
                 }
             v[nv] = 0.0;
-            for (j = 0; j < NX; j++)
+            for (j = 0; j < nx; j++)
                 {
-                    H[j + nv * NX] = j == i + 3 ? 1.0 : 0.0;
+                    H[j + nv * nx] = j == i + 3 ? 1.0 : 0.0;
                 }
             var[nv++] = 0.01;
         }
@@ -595,6 +598,8 @@ int valsol(const double *azel, const int *vsat, int n,
             azels[1 + ns * 2] = azel[1 + i * 2];
             ns++;
         }
+
+    // FIXME: DOP calculation for clock bias fixed mode
     dops(ns, azels, opt->elmin, dop);
     if (dop[0] <= 0.0 || dop[0] > opt->maxgdop)
         {
@@ -686,9 +691,13 @@ int estpos(const obsd_t *obs, int n, const double *rs, const double *dts,
     const prcopt_t *opt, sol_t *sol, double *azel, int *vsat,
     double *resp, char *msg)
 {
-    double x[NX] = {0};
-    double dx[NX];
-    double Q[NX * NX];
+    int nx = NX;
+    if (opt->clock_bias_fixed)
+        nx = 3; // only position
+
+    double *x = new double[NX]();
+    double *dx = new double[nx];
+    double *Q = new double[nx * nx];
     double *v;
     double *H;
     double *var;
@@ -704,8 +713,15 @@ int estpos(const obsd_t *obs, int n, const double *rs, const double *dts,
 
     trace(3, "estpos  : n=%d\n", n);
 
+    if (nx != NX)
+        {
+            x[3] = sol->dtr[0] * SPEED_OF_LIGHT_M_S;
+            x[4] = sol->dtr[1] * SPEED_OF_LIGHT_M_S;
+            x[5] = sol->dtr[2] * SPEED_OF_LIGHT_M_S;
+            x[6] = sol->dtr[3] * SPEED_OF_LIGHT_M_S;
+        }
     v = mat(n + 4, 1);
-    H = mat(NX, n + 4);
+    H = mat(nx, n + 4);
     var = mat(n + 4, 1);
 
     for (i = 0; i < 3; i++)
@@ -746,7 +762,7 @@ int estpos(const obsd_t *obs, int n, const double *rs, const double *dts,
             /* pseudorange residuals */
             nv = rescode(i, obs, n, rs, dts, vare, svh, nav, x, opt, v, H, var, azel, vsat, resp, &ns);
 
-            if (nv < NX)
+            if (nv < nx)
                 {
                     std::snprintf(msg_aux, sizeof(msg_aux), "lack of valid sats ns=%d", nv);
                     break;
@@ -756,49 +772,60 @@ int estpos(const obsd_t *obs, int n, const double *rs, const double *dts,
                 {
                     sig = sqrt(var[j]);
                     v[j] /= sig;
-                    for (k = 0; k < NX; k++)
+                    for (k = 0; k < nx; k++)
                         {
-                            H[k + j * NX] /= sig;
+                            H[k + j * nx] /= sig;
                         }
                 }
             /* least square estimation */
-            if ((info = lsq(H, v, NX, nv, dx, Q)))
+            if ((info = lsq(H, v, nx, nv, dx, Q)))
                 {
                     std::snprintf(msg_aux, sizeof(msg_aux), "lsq error info=%d", info);
                     break;
                 }
-            for (j = 0; j < NX; j++)
+            for (j = 0; j < nx; j++)
                 {
                     x[j] += dx[j];
                 }
 
-            if (norm_rtk(dx, NX) < 1e-4)
+            if (norm_rtk(dx, nx) < 1e-4)
                 {
                     sol->type = 0;
-                    sol->time = timeadd(obs[0].time, -x[3] / SPEED_OF_LIGHT_M_S);
-                    sol->dtr[0] = x[3] / SPEED_OF_LIGHT_M_S; /* receiver clock bias (s) */
-                    sol->dtr[1] = x[4] / SPEED_OF_LIGHT_M_S; /* glo-gps time offset (s) */
-                    sol->dtr[2] = x[5] / SPEED_OF_LIGHT_M_S; /* gal-gps time offset (s) */
-                    sol->dtr[3] = x[6] / SPEED_OF_LIGHT_M_S; /* bds-gps time offset (s) */
+                    if (!opt->clock_bias_fixed)
+                        {
+                            sol->time = timeadd(obs[0].time, -x[3] / SPEED_OF_LIGHT_M_S);
+                            sol->dtr[0] = x[3] / SPEED_OF_LIGHT_M_S; /* receiver clock bias (s) */
+                            sol->dtr[1] = x[4] / SPEED_OF_LIGHT_M_S; /* glo-gps time offset (s) */
+                            sol->dtr[2] = x[5] / SPEED_OF_LIGHT_M_S; /* gal-gps time offset (s) */
+                            sol->dtr[3] = x[6] / SPEED_OF_LIGHT_M_S; /* bds-gps time offset (s) */
+                        }
+                    else
+                        {
+                            // Update time based on the fixed rx clock bias
+                            sol->time = timeadd(obs[0].time, -sol->dtr[0]);
+                        }
                     for (j = 0; j < 6; j++)
                         {
                             sol->rr[j] = j < 3 ? x[j] : 0.0;
                         }
                     for (j = 0; j < 3; j++)
                         {
-                            sol->qr[j] = static_cast<float>(Q[j + j * NX]);
+                            sol->qr[j] = static_cast<float>(Q[j + j * nx]);
                         }
                     sol->qr[3] = static_cast<float>(Q[1]);      /* cov xy */
-                    sol->qr[4] = static_cast<float>(Q[2 + NX]); /* cov yz */
+                    sol->qr[4] = static_cast<float>(Q[2 + nx]); /* cov yz */
                     sol->qr[5] = static_cast<float>(Q[2]);      /* cov zx */
                     sol->ns = static_cast<unsigned char>(ns);
                     sol->age = sol->ratio = 0.0;
 
                     /* validate solution */
-                    if ((stat = valsol(azel, vsat, n, opt, v, nv, NX, msg)))
+                    if ((stat = valsol(azel, vsat, n, opt, v, nv, nx, msg)))
                         {
                             sol->stat = opt->sateph == EPHOPT_SBAS ? SOLQ_SBAS : SOLQ_SINGLE;
                         }
+                    delete [] x;
+                    delete [] dx;
+                    delete [] Q;
                     free(v);
                     free(H);
                     free(var);
@@ -811,6 +838,9 @@ int estpos(const obsd_t *obs, int n, const double *rs, const double *dts,
             std::snprintf(msg_aux, sizeof(msg_aux), "iteration divergent i=%d", i);
         }
 
+    delete [] x;
+    delete [] dx;
+    delete [] Q;
     free(v);
     free(H);
     free(var);

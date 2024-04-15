@@ -1349,7 +1349,7 @@ int zdres(int base, const obsd_t *obs, int n, const double *rs,
                 {
                     continue;
                 }
-            if (satazel(pos, e + i * 3, azel + i * 2) < opt->elmin)
+            if (satazel(pos, e + i * 3, nav->rec_ant_dir, azel + i * 2) < opt->elmin)
                 {
                     continue;
                 }
@@ -2662,6 +2662,7 @@ void rtkinit(rtk_t *rtk, const prcopt_t *opt)
         {
             rtk->rb[i] = 0.0;
         }
+    // FIXME: nx in clock bias fixed mode for PPP algorithm
     rtk->nx = opt->mode <= PMODE_FIXED ? NX_RTK(opt) : pppnx(opt);
     rtk->na = opt->mode <= PMODE_FIXED ? NR_RTK(opt) : pppnx(opt);
     rtk->tt = 0.0;

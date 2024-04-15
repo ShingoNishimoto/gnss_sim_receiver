@@ -252,7 +252,7 @@ int reppath(std::string const &path, std::string &rpath, gtime_t time, const cha
     const char *base);
 double satwavelen(int sat, int frq, const nav_t *nav);
 double geodist(const double *rs, const double *rr, double *e);
-double satazel(const double *pos, const double *e, double *azel);
+double satazel(const double *pos, const double *e, const double *rec_ant_att, double *azel);
 
 void dops(int ns, const double *azel, double elmin, double *dop);
 double ionmodel(gtime_t t, const double *ion, const double *pos,

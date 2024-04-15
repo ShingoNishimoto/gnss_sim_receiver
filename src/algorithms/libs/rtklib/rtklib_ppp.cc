@@ -1612,7 +1612,7 @@ int res_ppp(int iter __attribute__((unused)), const obsd_t *obs, int n, const do
 
             /* geometric distance/azimuth/elevation angle */
             if ((r = geodist(rs + i * 6, rr, e)) <= 0.0 ||
-                satazel(pos, e, azel + i * 2) < opt->elmin)
+                satazel(pos, e, nav->rec_ant_dir, azel + i * 2) < opt->elmin)
                 {
                     continue;
                 }

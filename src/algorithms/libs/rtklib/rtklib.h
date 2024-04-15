@@ -795,6 +795,9 @@ typedef struct
     lexeph_t lexeph[MAXSAT];      /* LEX ephemeris */
     lexion_t lexion;              /* LEX ionosphere correction */
     pppcorr_t pppcorr;            /* ppp corrections */
+
+    // FIXME: need to be able to update.
+    double rec_ant_dir[2];        /* receier antenna direction (Azimuth, Elevation) [rad] in enu frame*/
 } nav_t;
 
 
@@ -1001,6 +1004,7 @@ typedef struct
     int freqopt;                  /* disable L2-AR */
     char pppopt[256];             /* ppp option */
     bool bancroft_init;           /* enable Bancroft initialization for the first iteration of the PVT computation */
+    bool clock_bias_fixed;             /* receiver clock bias fixed mode*/
 } prcopt_t;
 
 

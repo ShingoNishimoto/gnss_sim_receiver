@@ -90,7 +90,7 @@ public:
 
     ~Rtklib_Solver();
 
-    bool get_PVT(const std::map<int, Gnss_Synchro>& gnss_observables_map, double kf_update_interval_s);
+    bool get_PVT(const std::map<int, Gnss_Synchro>& gnss_observables_map, double kf_update_interval_s, bool flag_clock_prop);
 
     double get_hdop() const override;
     double get_vdop() const override;
