@@ -81,6 +81,9 @@
 #include <sys/msg.h>                    // for msgctl
 #include <typeinfo>                     // for std::type_info, typeid
 #include <utility>                      // for pair
+// for mmap
+#include <sys/mman.h>
+#include <fcntl.h>
 
 #if HAS_GENERIC_LAMBDA
 #else
@@ -164,6 +167,7 @@ rtklib_pvt_gs::rtklib_pvt_gs(uint32_t nchannels,
       d_type_of_rx(conf_.type_of_receiver),
       d_observable_interval_ms(conf_.observable_interval_ms),
       d_pvt_errors_counter(0),
+      d_output_cnt_for_clk_prop_after_fix(conf_.output_cnt_for_clk_prop_after_fix),
       d_dump(conf_.dump),
       d_dump_mat(conf_.dump_mat && conf_.dump),
       d_rinex_output_enabled(conf_.rinex_output_enabled),
@@ -177,11 +181,11 @@ rtklib_pvt_gs::rtklib_pvt_gs(uint32_t nchannels,
       d_show_local_time_zone(conf_.show_local_time_zone),
       d_enable_rx_clock_correction(conf_.enable_rx_clock_correction),
       d_enable_rx_clock_propagation(conf_.enable_rx_clock_propagation),
-      d_output_cnt_for_clk_prop_after_fix(conf_.output_cnt_for_clk_prop_after_fix),
       d_an_printer_enabled(conf_.an_output_enabled),
       d_log_timetag(conf_.log_source_timetag),
       d_use_has_corrections(conf_.use_has_corrections),
-      d_use_unhealthy_sats(conf_.use_unhealthy_sats)
+      d_use_unhealthy_sats(conf_.use_unhealthy_sats),
+      d_share_rx_clock_bias(conf_.share_rx_clock_bias)
 {
     // Send feedback message to observables block with the receiver clock offset
     this->message_port_register_out(pmt::mp("pvt_to_observables"));
@@ -568,6 +572,37 @@ rtklib_pvt_gs::rtklib_pvt_gs(uint32_t nchannels,
                 {
                     std::cerr << "Log PVT timetag metadata file cannot be created: " << e.what() << '\n';
                     d_log_timetag = false;
+                }
+        }
+
+    // clock bias share mode
+    if (d_share_rx_clock_bias)
+        {
+            // open file
+            if ((d_mmap_params.fd = open("./rx_clock_bias.txt", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR)) < 0)
+                {
+                    std::cerr << "Rx clock bias file cannot be created: " << strerror(errno) << '\n';
+                    exit(EXIT_FAILURE);
+                }
+
+            int ret;
+            // strech the file size to the size of the mmapped array
+            if ((ret = lseek(d_mmap_params.fd, d_mmap_params.length - 1, SEEK_SET)) == -1)
+                {
+                    std::cerr << "Failed to strech the file size: " << strerror(errno) << '\n';
+                    exit(EXIT_FAILURE);
+                }
+            // Write zero byte at the end of the streched file
+            if ((ret = write(d_mmap_params.fd, "", 1)) == -1)
+                {
+                    close(d_mmap_params.fd);
+                    std::cerr << "Error writing last byte of the file" << strerror(errno) << '\n';
+                }
+            // mapping
+            if ((d_mmap_params.mapped_arr = reinterpret_cast<char*>(mmap(NULL, d_mmap_params.length, PROT_WRITE | PROT_READ, MAP_SHARED_VALIDATE, d_mmap_params.fd, 0))) == MAP_FAILED)
+                {
+                    close(d_mmap_params.fd);
+                    std::cerr << "Failed to mmap: " << strerror(errno) << '\n';
                 }
         }
 
@@ -1133,6 +1168,21 @@ rtklib_pvt_gs::~rtklib_pvt_gs()
                     catch (const std::exception& e)
                         {
                             LOG(WARNING) << "Problem closing Log PVT timetag metadata file: " << e.what();
+                        }
+                }
+            // clock bias share mode
+            if (d_share_rx_clock_bias)
+                {
+                    // unmap
+                    if (munmap(d_mmap_params.mapped_arr, d_mmap_params.length) == -1)
+                        {
+                            std::cerr << "Cannot unmap: " << strerror(errno) << '\n';
+                        }
+
+                    // close file
+                    if (close(d_mmap_params.fd) == -1)
+                        {
+                            std::cerr << "Rx clock bias file cannot be closed: " << strerror(errno) << '\n';
                         }
                 }
         }
@@ -1930,6 +1980,60 @@ void rtklib_pvt_gs::update_HAS_corrections()
         }
 }
 
+void rtklib_pvt_gs::write_rx_clock_bias(const double rx_clock_offset_s, const double tag_tow_s, uint32_t PRN)
+{
+    std::stringstream stream;
+    // convert Rx time from double to string
+    stream << std::fixed << std::setprecision(2) << d_rx_time;
+    std::string str_rx_time_s = stream.str();
+    if (str_rx_time_s.size() < 9)
+        {
+            // fill 0 to align characters.
+            str_rx_time_s = std::string(9 - str_rx_time_s.size(), '0') + str_rx_time_s;
+        }
+    stream.str("");
+    // convert tow from double to string (in 17 characters including point)
+    const uint8_t fixed_char_num = 17;
+    stream << std::setprecision(15) << tag_tow_s;
+    std::string str_tag_tow_s = stream.str();
+    if (str_tag_tow_s.size() > fixed_char_num)
+        {
+            // erase characters.
+            str_tag_tow_s.erase(fixed_char_num, str_tag_tow_s.size() - fixed_char_num);
+        }
+    stream.str("");
+    // convert rx_clock_bias from double to string (in 17 characters including point)
+    stream << std::setprecision(15) << rx_clock_offset_s;
+    std::string str_rx_clock_bias_s = stream.str();
+    if (str_rx_clock_bias_s.size() > fixed_char_num)
+        {
+            // erase characters.
+            str_rx_clock_bias_s.erase(fixed_char_num, str_rx_clock_bias_s.size() - fixed_char_num);
+        }
+    stream.str("");
+    // convert PRN from int to string
+    std::string str_PRN = std::to_string(PRN);
+    if (str_PRN.size() < 2)
+        {
+            // fill 0 to align characters.
+            str_PRN.insert(str_PRN.begin(), '0');
+        }
+
+    std::string str_one_line = str_rx_time_s + std::string(",") + str_tag_tow_s + std::string(",") + str_rx_clock_bias_s + std::string(",") + str_PRN + std::string("\n");
+
+    // write as if the file were memory (an array).
+    for (int i = 0; i < d_mmap_params.size_one_line; i++)
+        {
+            d_mmap_params.mapped_arr[d_mmap_params.current_offset + i] = str_one_line.at(i);
+        }
+
+    // update offset
+    d_mmap_params.current_offset += d_mmap_params.size_one_line;
+    if (d_mmap_params.current_offset >= d_mmap_params.size_one_line * 500)
+        {
+            d_mmap_params.current_offset = 0;
+        }
+}
 
 int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_items,
     gr_vector_void_star& output_items __attribute__((unused)))
@@ -1940,6 +2044,7 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
             std::vector<gr::tag_t> tags_vec;
             // time tag from obs to pvt is always propagated in channel 0
             this->get_tags_in_range(tags_vec, 0, this->nitems_read(0), this->nitems_read(0) + noutput_items);
+            // TODO: tags_vec is empty in most case
             for (const auto& it : tags_vec)
                 {
                     try
@@ -2119,6 +2224,7 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                             pvt_result = d_internal_pvt_solver->get_PVT(d_gnss_observables_map, d_observable_interval_ms / 1000.0, false);
                         }
                     // #### solve PVT and store the corrected observable set
+                    double tag_tow_s_at_ch0 = 0;
                     if (pvt_result)
                         {
                             // if (d_enable_rx_clock_propagation && output_cnt_after_fix < d_output_cnt_for_clk_prop_after_fix)
@@ -2145,6 +2251,7 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                                                 }
                                             while (fabs(delta_rxtime_to_tag_ms) >= 100 and !d_TimeChannelTagTimestamps.empty());
 
+                                            tag_tow_s_at_ch0 = (static_cast<double>(current_tag.tow_ms) + current_tag.tow_ms_fraction + delta_rxtime_to_tag_ms) / 1000.0;
                                             // 2. If both timestamps (relative to the receiver's start) are closer than 100 ms (the granularituy of the PVT)
                                             if (fabs(delta_rxtime_to_tag_ms) <= 100)  // [ms]
                                                 {
@@ -2153,6 +2260,7 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                                                         {
                                                             double current_corrected_RX_clock_ns = (d_rx_time - Rx_clock_offset_s) * 1e9;
                                                             double TAG_time_ns = (static_cast<double>(current_tag.tow_ms) + current_tag.tow_ms_fraction + delta_rxtime_to_tag_ms) * 1e6;
+                                                            tag_tow_s_at_ch0 = TAG_time_ns / 1e9;
                                                             log_source_timetag_info(current_corrected_RX_clock_ns, TAG_time_ns);
                                                             double tow_error_ns = current_corrected_RX_clock_ns - TAG_time_ns;
                                                             std::cout << "[Time ch] RX TimeTag Week: " << current_tag.week
@@ -2273,7 +2381,7 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                                 }
                             else
                                 {
-                                    DLOG(INFO) << "Rx clock offset at interpolated RX time: " << Rx_clock_offset_s * 1000.0 << "[s]"
+                                    DLOG(INFO) << "Rx clock offset at interpolated RX time: " << Rx_clock_offset_s * 1000.0 << "[ms]"
                                                << " at RX time: " << static_cast<uint32_t>(d_rx_time * 1000.0) << " [ms]";
                                     // Optional debug code: export observables snapshot for rtklib unit testing
                                     // std::cout << "step 1: save gnss_synchro map\n";
@@ -2406,6 +2514,14 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                                                 flag_write_RTCM_1020_output,
                                                 flag_write_RTCM_1045_output,
                                                 d_enable_rx_clock_correction);
+                                        }
+                                    if (d_share_rx_clock_bias)
+                                        {
+                                            if (tag_tow_s_at_ch0 == 0)
+                                            {
+                                                tag_tow_s_at_ch0 = d_gnss_observables_map.begin()->second.interp_TOW_ms / 1000.0;
+                                            }
+                                            write_rx_clock_bias(Rx_clock_offset_s, tag_tow_s_at_ch0, d_gnss_observables_map.begin()->second.PRN);
                                         }
                                 }
                         }

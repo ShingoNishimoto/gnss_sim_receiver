@@ -172,6 +172,8 @@ private:
     bool save_gnss_synchro_map_xml(const std::string& file_name);  // debug helper function
     bool load_gnss_synchro_map_xml(const std::string& file_name);  // debug helper function
 
+    void write_rx_clock_bias(const double rx_clock_offset_s, const double tag_tow_s, uint32_t PRN);
+
     std::fstream d_log_timetag_file;
 
     std::shared_ptr<Rtklib_Solver> d_internal_pvt_solver;
@@ -280,6 +282,18 @@ private:
     bool d_log_timetag;
     bool d_use_has_corrections;
     bool d_use_unhealthy_sats;
+    bool d_share_rx_clock_bias;
+
+    // for mmap
+    struct rx_clock_bias_mmap
+    {
+        int fd = 0;
+        char* mapped_arr = NULL;
+        off_t current_offset = 0;
+        uint32_t length = 0x6000; // 24500B
+        const uint8_t size_one_line = 49; // Bytes
+    };
+    struct rx_clock_bias_mmap d_mmap_params;
 };
 
 

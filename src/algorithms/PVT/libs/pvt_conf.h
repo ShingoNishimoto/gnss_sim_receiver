@@ -99,6 +99,7 @@ public:
     bool use_has_corrections = true;
     bool use_unhealthy_sats = false;
     bool rec_antenna_attitude_fix = true;
+    bool share_rx_clock_bias = false;
 
     // PVT KF parameters
     bool enable_pvt_kf = false;
