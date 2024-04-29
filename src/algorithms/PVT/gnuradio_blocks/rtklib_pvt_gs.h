@@ -290,7 +290,7 @@ private:
         int fd = 0;
         char* mapped_arr = NULL;
         off_t current_offset = 0;
-        uint32_t length = 0x6000; // 24500B
+        uint32_t length = 0x5FB4; // 24500B (= 49 * 500)
         const uint8_t size_one_line = 49; // Bytes
     };
     struct rx_clock_bias_mmap d_mmap_params;

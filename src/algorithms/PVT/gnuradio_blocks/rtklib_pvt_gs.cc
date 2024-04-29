@@ -578,22 +578,21 @@ rtklib_pvt_gs::rtklib_pvt_gs(uint32_t nchannels,
     // clock bias share mode
     if (d_share_rx_clock_bias)
         {
-            // open file
+            // open file TODO: need to change the directory for sharing
             if ((d_mmap_params.fd = open("./rx_clock_bias.txt", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR)) < 0)
                 {
                     std::cerr << "Rx clock bias file cannot be created: " << strerror(errno) << '\n';
                     exit(EXIT_FAILURE);
                 }
 
-            int ret;
             // strech the file size to the size of the mmapped array
-            if ((ret = lseek(d_mmap_params.fd, d_mmap_params.length - 1, SEEK_SET)) == -1)
+            if (lseek(d_mmap_params.fd, d_mmap_params.length - 1, SEEK_SET) == -1)
                 {
                     std::cerr << "Failed to strech the file size: " << strerror(errno) << '\n';
                     exit(EXIT_FAILURE);
                 }
             // Write zero byte at the end of the streched file
-            if ((ret = write(d_mmap_params.fd, "", 1)) == -1)
+            if (write(d_mmap_params.fd, "", 1) == -1)
                 {
                     close(d_mmap_params.fd);
                     std::cerr << "Error writing last byte of the file" << strerror(errno) << '\n';
@@ -603,6 +602,12 @@ rtklib_pvt_gs::rtklib_pvt_gs(uint32_t nchannels,
                 {
                     close(d_mmap_params.fd);
                     std::cerr << "Failed to mmap: " << strerror(errno) << '\n';
+                    exit(EXIT_FAILURE);
+                }
+            // fill with space
+            for (u_int32_t i = 0; i < d_mmap_params.length; i++)
+                {
+                    d_mmap_params.mapped_arr[i] = ' ';
                 }
         }
 
