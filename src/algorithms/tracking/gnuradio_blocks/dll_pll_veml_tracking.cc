@@ -1783,6 +1783,41 @@ int dll_pll_veml_tracking::general_work(int noutput_items __attribute__((unused)
                 DLOG(INFO) << "PULL-IN Doppler [Hz] = " << d_carrier_doppler_hz
                            << ". PULL-IN Code Phase [samples] = " << d_acq_code_phase_samples;
 
+                if (d_enable_extended_integration)
+                {
+                    // UPDATE INTEGRATION TIME
+                    d_extend_correlation_symbols_count = 0;
+                    d_current_correlation_time_s = static_cast<float>(d_extend_correlation_symbols) * static_cast<float>(d_code_period);
+                    // LOG(INFO) << "Enabled " << d_extend_correlation_symbols * static_cast<int32_t>(d_code_period * 1000.0) << " ms extended correlator in channel "
+                    //             << d_channel
+                    //             << " for satellite " << Gnss_Satellite(d_systemName, d_acquisition_gnss_synchro->PRN);
+                    // std::cout << "Enabled " << d_extend_correlation_symbols * static_cast<int32_t>(d_code_period * 1000.0) << " ms extended correlator in channel "
+                    //             << d_channel
+                                // << " for satellite " << Gnss_Satellite(d_systemName, d_acquisition_gnss_synchro->PRN) << '\n';
+                    // Set narrow taps delay values [chips]
+                    d_code_loop_filter.set_update_interval(static_cast<float>(d_current_correlation_time_s));
+                    d_code_loop_filter.set_noise_bandwidth(d_trk_parameters.dll_bw_narrow_hz);
+                    d_carrier_loop_filter.set_params(d_trk_parameters.fll_bw_hz, d_trk_parameters.pll_bw_narrow_hz, d_trk_parameters.pll_filter_order);
+                    if (d_veml)
+                        {
+                            d_local_code_shift_chips[0] = -d_trk_parameters.very_early_late_space_narrow_chips * static_cast<float>(d_code_samples_per_chip);
+                            d_local_code_shift_chips[1] = -d_trk_parameters.early_late_space_narrow_chips * static_cast<float>(d_code_samples_per_chip);
+                            d_local_code_shift_chips[3] = d_trk_parameters.early_late_space_narrow_chips * static_cast<float>(d_code_samples_per_chip);
+                            d_local_code_shift_chips[4] = d_trk_parameters.very_early_late_space_narrow_chips * static_cast<float>(d_code_samples_per_chip);
+                            d_trk_parameters.spc = d_trk_parameters.early_late_space_narrow_chips;
+                            // if (std::string(d_trk_parameters.signal) == "E1")
+                            //    {
+                            //        d_trk_parameters.slope = -CalculateSlopeAbs(&SinBocCorrelationFunction<1, 1>, d_trk_parameters.spc);
+                            //        d_trk_parameters.y_intercept = GetYInterceptAbs(&SinBocCorrelationFunction<1, 1>, d_trk_parameters.spc);
+                            //    }
+                        }
+                    else
+                        {
+                            d_local_code_shift_chips[0] = -d_trk_parameters.early_late_space_narrow_chips * static_cast<float>(d_code_samples_per_chip);
+                            d_local_code_shift_chips[2] = d_trk_parameters.early_late_space_narrow_chips * static_cast<float>(d_code_samples_per_chip);
+                            d_trk_parameters.spc = d_trk_parameters.early_late_space_narrow_chips;
+                        }
+                }
                 consume_each(samples_offset);  // shift input to perform alignment with local replica
                 return 0;
             }
@@ -1814,7 +1849,8 @@ int dll_pll_veml_tracking::general_work(int noutput_items __attribute__((unused)
                                   << " for satellite " << Gnss_Satellite(d_systemName, d_acquisition_gnss_synchro->PRN) << '\n';
                     }
                 // Check lock status
-                if (!cn0_and_tracking_lock_status(d_code_period))
+                // if (!cn0_and_tracking_lock_status(d_code_period))
+                if (!cn0_and_tracking_lock_status(d_code_period * static_cast<double>(d_extend_correlation_symbols)))
                     {
                         clear_tracking_vars();
                         d_state = 0;                                         // loss-of-lock detected
