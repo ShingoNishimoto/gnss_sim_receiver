@@ -1989,6 +1989,7 @@ void rtklib_pvt_gs::write_rx_clock_bias(const double rx_clock_offset_s, const do
 {
     std::stringstream stream;
     // convert Rx time from double to string
+    assert(d_rx_time == this->d_gnss_observables_map.begin()->second.RX_time);
     stream << std::fixed << std::setprecision(2) << d_rx_time;
     std::string str_rx_time_s = stream.str();
     if (str_rx_time_s.size() < 9)
@@ -2524,9 +2525,9 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                                         {
                                             if (tag_tow_s_at_ch0 == 0)
                                             {
-                                                tag_tow_s_at_ch0 = d_gnss_observables_map.begin()->second.interp_TOW_ms / 1000.0;
+                                                tag_tow_s_at_ch0 = this->d_gnss_observables_map.begin()->second.interp_TOW_ms / 1000.0;
                                             }
-                                            write_rx_clock_bias(Rx_clock_offset_s, tag_tow_s_at_ch0, d_gnss_observables_map.begin()->second.PRN);
+                                            write_rx_clock_bias(Rx_clock_offset_s, tag_tow_s_at_ch0, this->d_gnss_observables_map.begin()->second.PRN);
                                         }
                                 }
                         }
