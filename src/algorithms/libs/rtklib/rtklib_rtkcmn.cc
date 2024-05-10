@@ -2349,13 +2349,15 @@ void ecef2enu(const double *pos, const double *r, double *e)
  *-----------------------------------------------------------------------------*/
 void enu2ant(const double *enu, const double *rec_ant_att, double *enu_ant)
 {
-    double E[9];
-    double rec_ant_att_latlon[2];
-    rec_ant_att_latlon[0] = rec_ant_att[1];
-    rec_ant_att_latlon[1] = rec_ant_att[0];
+    double sin_az = sin(rec_ant_att[0]);
+    double cos_az = cos(rec_ant_att[0]);
+    double sin_el = sin(rec_ant_att[1]);
+    double cos_el = cos(rec_ant_att[1]);
+    double E[9] = { sin_el * cos_az, -sin_az, cos_el * cos_az,
+                    sin_el * sin_az,  cos_az, cos_el * sin_az,
+                    -cos_el,          0,           sin_el};
 
-    xyz2enu(rec_ant_att_latlon, E);
-    matmul("NN", 3, 1, 3, 1.0, E, enu, 0.0, enu_ant);
+    matmul("NN", 3, 1, 3, 1.0, E, enu, 0.0, enu_ant); // NOTE: this is no longer north, east
 }
 
 /* transform local vector to ecef coordinate -----------------------------------
@@ -4400,14 +4402,15 @@ double satazel(const double *pos, const double *e, const double *rec_ant_att, do
     if (pos[2] > -RE_WGS84)
         {
             ecef2enu(pos, e, enu);
-            // TODO: enu_ant.
             enu2ant(enu, rec_ant_att, enu_ant);
             az = dot(enu_ant, enu_ant, 2) < 1e-12 ? 0.0 : atan2(enu_ant[0], enu_ant[1]);
+            // az = dot(enu, enu, 2) < 1e-12 ? 0.0 : atan2(enu[0], enu[1]);
             if (az < 0.0)
                 {
                     az += 2 * GNSS_PI;
                 }
             el = asin(enu_ant[2]);
+            // el = asin(enu[2]);
         }
     if (azel)
         {

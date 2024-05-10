@@ -2566,7 +2566,8 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                                 << TEXT_BOLD_GREEN
                                 << "Velocity: " << std::fixed << std::setprecision(2)
                                 << "East: " << d_user_pvt_solver->get_rx_vel()[0] << " [m/s], North: " << d_user_pvt_solver->get_rx_vel()[1]
-                                << " [m/s], Up = " << d_user_pvt_solver->get_rx_vel()[2] << std::setprecision(ss) << " [m/s]" << TEXT_RESET << std::endl;
+                                << " [m/s], Up = " << d_user_pvt_solver->get_rx_vel()[2] << std::setprecision(ss) << " [m/s], RX clock drift: "
+                                << std::fixed << std::setprecision(6) << d_user_pvt_solver->get_clock_drift_ppm() << "[ppm]" << std::setprecision(ss) << TEXT_RESET << std::endl;
                             DLOG(INFO) << "RX clock drift: " << d_user_pvt_solver->get_clock_drift_ppm() << " [ppm]";
 
                             // boost::posix_time::ptime p_time;
