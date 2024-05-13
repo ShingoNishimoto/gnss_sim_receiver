@@ -336,6 +336,8 @@ int main(int argc, char** argv)
 
             // 1. Load configuration parameters from config file
             std::shared_ptr<ConfigurationInterface> configuration = std::make_shared<FileConfiguration>(FLAGS_config_file);
+            if (FLAGS_bladeRF_serial != "")
+                configuration->set_property("SignalSource.osmosdr_args", FLAGS_bladeRF_serial);
             front_end_cal.set_configuration(configuration);
 
             // 2. Get SUPL information from server: Ephemeris record, assistance info and TOW
