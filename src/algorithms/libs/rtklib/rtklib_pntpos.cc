@@ -691,11 +691,27 @@ int estpos(const obsd_t *obs, int n, const double *rs, const double *dts,
     const prcopt_t *opt, sol_t *sol, double *azel, int *vsat,
     double *resp, char *msg)
 {
+    double *x = new double[NX]();
     int nx = NX;
     if (opt->clock_bias_fixed)
-        nx = 3; // only position
+        {
+            nx = 3; // only position
+            if (opt->mode == PMODE_SINGLE)
+                {
+                    x[3] = sol->dtr[0] * SPEED_OF_LIGHT_M_S;
+                    x[4] = sol->dtr[1] * SPEED_OF_LIGHT_M_S;
+                    x[5] = sol->dtr[2] * SPEED_OF_LIGHT_M_S;
+                    x[6] = sol->dtr[3] * SPEED_OF_LIGHT_M_S;
+                }
+            else
+                {
+                    x[3] = sol->dtr[0];
+                    x[4] = sol->dtr[1];
+                    x[5] = sol->dtr[2];
+                    x[6] = sol->dtr[3];
+                }
+        }
 
-    double *x = new double[NX]();
     double *dx = new double[nx];
     double *Q = new double[nx * nx];
     double *v;
@@ -713,13 +729,6 @@ int estpos(const obsd_t *obs, int n, const double *rs, const double *dts,
 
     trace(3, "estpos  : n=%d\n", n);
 
-    if (nx != NX)
-        {
-            x[3] = sol->dtr[0] * SPEED_OF_LIGHT_M_S;
-            x[4] = sol->dtr[1] * SPEED_OF_LIGHT_M_S;
-            x[5] = sol->dtr[2] * SPEED_OF_LIGHT_M_S;
-            x[6] = sol->dtr[3] * SPEED_OF_LIGHT_M_S;
-        }
     v = mat(n + 4, 1);
     H = mat(nx, n + 4);
     var = mat(n + 4, 1);

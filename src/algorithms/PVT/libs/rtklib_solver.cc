@@ -1626,8 +1626,10 @@ bool Rtklib_Solver::get_PVT(const std::map<int, Gnss_Synchro> &gnss_observables_
                             this->set_course_over_ground(new_cog);
                         }
 
-                    this->set_time_offset_s(rx_position_and_time[3]);
-
+                    if (!flag_clock_prop)
+                        {
+                            this->set_time_offset_s(rx_position_and_time[3]);
+                        }
                     DLOG(INFO) << "RTKLIB Position at RX TOW = " << gnss_observables_map.cbegin()->second.RX_time
                                << " in ECEF (X,Y,Z,t[meters]) = " << rx_position_and_time[0] << ", " << rx_position_and_time[1] << ", " << rx_position_and_time[2] << ", " << rx_position_and_time[3];
 

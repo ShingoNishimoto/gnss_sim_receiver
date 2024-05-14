@@ -98,6 +98,9 @@ ControlThread::ControlThread()
         {
             configuration_ = std::make_shared<FileConfiguration>(FLAGS_c);
         }
+    if (FLAGS_bladeRF_serial != "")
+        configuration_->set_property("SignalSource.osmosdr_args", FLAGS_bladeRF_serial);
+
     // Basic configuration checks
     auto aux = std::dynamic_pointer_cast<FileConfiguration>(configuration_);
     conf_file_has_section_ = aux->has_section();

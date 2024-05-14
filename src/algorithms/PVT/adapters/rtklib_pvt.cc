@@ -893,6 +893,9 @@ Rtklib_Pvt::Rtklib_Pvt(const ConfigurationInterface* configuration,
     // Set maximum clock offset allowed if pvt_output_parameters.enable_rx_clock_correction = false
     pvt_output_parameters.max_obs_block_rx_clock_offset_ms = configuration->property(role + ".max_clock_offset_ms", pvt_output_parameters.max_obs_block_rx_clock_offset_ms);
 
+    // Enable or disable rx clock bias sharingm mode
+    pvt_output_parameters.share_rx_clock_bias = configuration->property(role + ".share_rx_clock_bias", false);
+
     // Enable or disable clock propagation mode after fixing position and clock
     pvt_output_parameters.enable_rx_clock_propagation = configuration->property(role + ".enable_rx_clock_propagation", false);
     pvt_output_parameters.output_cnt_for_clk_prop_after_fix = configuration->property(role + ".output_cnt_for_clk_prop_after_fix", 0);

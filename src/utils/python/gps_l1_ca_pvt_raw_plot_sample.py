@@ -30,12 +30,12 @@
  -----------------------------------------------------------------------------
 """
 
-import utm
 import numpy as np
+import pyproj
+import utm
 from lib.gps_l1_ca_read_pvt_dump import gps_l1_ca_read_pvt_dump
 from lib.plotNavigation import plotNavigation
-import pyproj
-from lib.plotPosition import plot_position, plot_oneVStime
+from lib.plotPosition import plot_oneVStime, plot_position
 
 settings = {}
 utm_e = []
@@ -45,10 +45,10 @@ N_UTM = []
 utm_zone = []
 
 # ---------- CHANGE HERE:
-samplingFreq = 64e6 / 16
+samplingFreq = 3e6
 channels = 5
-path = '/home/labnav/Desktop/TEST_IRENE/'
-pvt_raw_log_path = path + 'PVT.dat'
+path = '/home/junichiro/work/gnss_sim_receiver/test/'
+pvt_raw_log_path = path + 'pvt.dat'
 nav_sol_period = 10
 plot_skyplot = 0
 
