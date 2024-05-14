@@ -42,15 +42,16 @@
 import math
 import os.path
 import webbrowser
-import numpy as np
-import matplotlib.pyplot as plt
+
 import folium
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 def plot_position(navSolutions):
 
     # ---------- CHANGE HERE:
-    fig_path = '/home/labnav/Desktop/TEST_IRENE/PLOTS/PlotPosition/'
+    fig_path = '/home/junichiro/work/gnss_sim_receiver/test/'
     fig_path_maps = fig_path + 'maps/'
     filename_map = 'mapPlotPosition.html'
     filename_map_t = 'mapTerrainPotPosition.html'
@@ -99,7 +100,7 @@ def plot_position(navSolutions):
     webbrowser.open(fig_path_maps + filename_map)
 
     # Optional: with terrain ->
-    """    
+    """
     n = folium.Map(location=[navSolutions['latitude'][0],
                              navSolutions['longitude'][0]], zoom_start=100,
                    tiles='Stamen Terrain')
@@ -156,7 +157,7 @@ def plot_position(navSolutions):
 def plot_oneVStime(navSolutions, name):
 
     # ---------- CHANGE HERE:
-    fig_path = '/home/labnav/Desktop/TEST_IRENE/PLOTS/PlotPosition/'
+    fig_path = '/home/junichiro/work/gnss_sim_receiver/test/'
     if not os.path.exists(fig_path):
         os.mkdir(fig_path)
 

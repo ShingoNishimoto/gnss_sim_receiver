@@ -32,15 +32,16 @@
  -----------------------------------------------------------------------------
 """
 
-import numpy as np
-import matplotlib.pyplot as plt
 import os
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 def plotNavigation(navSolutions, settings, plot_skyplot=0):
 
     # ---------- CHANGE HERE:
-    fig_path = '/home/labnav/Desktop/TEST_IRENE/PLOTS/PlotNavigation'
+    fig_path = '/home/junichiro/work/gnss_sim_receiver/test/'
 
     if not os.path.exists(fig_path):
         os.makedirs(fig_path)
