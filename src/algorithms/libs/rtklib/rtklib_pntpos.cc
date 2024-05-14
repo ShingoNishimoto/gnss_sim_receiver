@@ -990,8 +990,7 @@ int resdop(const obsd_t *obs, int n, const double *rs, const double *dts,
     double lam;
     double rate;
     double pos[3];
-    double E[9];
-    double a[3];
+    double a[3], b[3];
     double e[3];
     double vs[3];
     double cosel;
@@ -1003,7 +1002,6 @@ int resdop(const obsd_t *obs, int n, const double *rs, const double *dts,
     trace(3, "resdop  : n=%d\n", n);
 
     ecef2pos(rr, pos);
-    xyz2enu(pos, E);
 
     for (i = 0; i < n && i < MAXOBS; i++)
         {
@@ -1025,12 +1023,13 @@ int resdop(const obsd_t *obs, int n, const double *rs, const double *dts,
                 {
                     continue;
                 }
-            /* line-of-sight vector in ecef */
+            /* convert line-of-sight vector to ecef */
             cosel = cos(azel[1 + i * 2]);
             a[0] = sin(azel[i * 2]) * cosel;
             a[1] = cos(azel[i * 2]) * cosel;
             a[2] = sin(azel[1 + i * 2]);
-            matmul("TN", 3, 1, 3, 1.0, E, a, 0.0, e);
+            ant2enu(nav->rec_ant_dir, a, b);
+            enu2ecef(pos, b, e);
 
             /* satellite velocity relative to receiver in ecef */
             for (j = 0; j < 3; j++)

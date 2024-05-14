@@ -2324,6 +2324,30 @@ void xyz2enu(const double *pos, double *E)
     E[8] = sinp;
 }
 
+/* local coordinate to antenna local coordinate transformation matrix ------------------------------
+ * compute local coordinate to antenna local coordinate transformation matrix
+ * args   : double *rec_ant_att  I   antenna direction in local coordinate {azimuth, elevation} (rad)
+ *          double *E            O   local coord to antenna local coord transformation matrix (3x3)
+ * return : none
+ * notes  : matirix stored by column-major order (fortran convention)
+ *-----------------------------------------------------------------------------*/
+void mat_enu2ant(const double *rec_ant_att, double *E)
+{
+    double sin_az = sin(rec_ant_att[0]);
+    double cos_az = cos(rec_ant_att[0]);
+    double sin_el = sin(rec_ant_att[1]);
+    double cos_el = cos(rec_ant_att[1]);
+
+    E[0] = sin_el * cos_az;
+    E[3] = sin_el * sin_az;
+    E[6] = -cos_el;
+    E[1] = -sin_az;
+    E[4] = cos_az;
+    E[7] = 0;
+    E[2] = cos_el * cos_az;
+    E[5] = cos_el * sin_az;
+    E[8] = sin_el;
+}
 
 /* transform ecef vector to local tangental coordinate -------------------------
  * transform ecef vector to local tangental coordinate
@@ -2342,22 +2366,17 @@ void ecef2enu(const double *pos, const double *r, double *e)
 
 /* transform enu vector to antenna fixed local tangental coordinate -------------------------
  * transform enu vector to antenna fixed local tangental coordinate
- * args   : double *enu         I   vector in enu {East,North, Up} (m)
- *          double *rec_ant_att I   receiver antenna direction in enu frame {azimuth,elevation} (rad)
+ * args   : double *rec_ant_att I   receiver antenna direction in enu frame {azimuth,elevation} (rad)
+ *          double *enu         I   vector in enu {East,North, Up}
  *          double *enu_ant     O   vector in local tangental coordinate {e,n,u}_antenna
  * return : none
  *-----------------------------------------------------------------------------*/
-void enu2ant(const double *enu, const double *rec_ant_att, double *enu_ant)
+void enu2ant(const double *rec_ant_att, const double *enu, double *enu_ant)
 {
-    double sin_az = sin(rec_ant_att[0]);
-    double cos_az = cos(rec_ant_att[0]);
-    double sin_el = sin(rec_ant_att[1]);
-    double cos_el = cos(rec_ant_att[1]);
-    double E[9] = { sin_el * cos_az, -sin_az, cos_el * cos_az,
-                    sin_el * sin_az,  cos_az, cos_el * sin_az,
-                    -cos_el,          0,           sin_el};
+    double E[9];
 
-    matmul("NN", 3, 1, 3, 1.0, E, enu, 0.0, enu_ant); // NOTE: this is no longer north, east
+    mat_enu2ant(rec_ant_att, E);
+    matmul("NN", 3, 1, 3, 1.0, E, enu, 0.0, enu_ant);  // NOTE: this is no longer north, east
 }
 
 /* transform local vector to ecef coordinate -----------------------------------
@@ -2373,6 +2392,21 @@ void enu2ecef(const double *pos, const double *e, double *r)
 
     xyz2enu(pos, E);
     matmul("TN", 3, 1, 3, 1.0, E, e, 0.0, r);
+}
+
+/* transform antenna local vector to local coordinate (East, North, Up) -----------------------------------
+ * transform antenna local tangental coordinate vector to local tangental coordinate
+ * args   : double *rec_ant_att  I   eceiver antenna direction in enu frame {azimuth,elevation} (rad)
+ *          double *enu_ant      I   vector in antenna local tangental coordinate {e,n,u}_antenna
+ *          double *enu          O   vector in local tangental coordinate {East,North, Up}
+ * return : none
+ *-----------------------------------------------------------------------------*/
+void ant2enu(const double *rec_ant_att, const double *enu_ant, double *enu)
+{
+    double E[9];
+
+    mat_enu2ant(rec_ant_att, E);
+    matmul("TN", 3, 1, 3, 1.0, E, enu_ant, 0.0, enu);
 }
 
 
@@ -4402,7 +4436,7 @@ double satazel(const double *pos, const double *e, const double *rec_ant_att, do
     if (pos[2] > -RE_WGS84)
         {
             ecef2enu(pos, e, enu);
-            enu2ant(enu, rec_ant_att, enu_ant);
+            enu2ant(rec_ant_att, enu, enu_ant);
             az = dot(enu_ant, enu_ant, 2) < 1e-12 ? 0.0 : atan2(enu_ant[0], enu_ant[1]);
             // az = dot(enu, enu, 2) < 1e-12 ? 0.0 : atan2(enu[0], enu[1]);
             if (az < 0.0)

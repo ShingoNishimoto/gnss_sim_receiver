@@ -185,7 +185,7 @@ int main(int argc, char** argv)
     try
         {
             std::cout << "Waiting..." << std::endl;
-            sleep(1);
+            sleep(3); // at least 3 sec with laptop. TODO: check with raspi
 
             auto control_thread = std::make_unique<ControlThread>();
 
@@ -201,7 +201,7 @@ int main(int argc, char** argv)
                 boost::thread* th_bladegps = new boost::thread(boost::bind(bladegps_thread, bladerf_dev, argstring));
 
                 std::cout << "Waiting..." << std::endl;
-                sleep(1);
+                sleep(3);
             }
             // record startup time
             start = std::chrono::system_clock::now();
