@@ -1,9 +1,9 @@
 [submodule "src/bladeGPS"]
 	path = src/bladeGPS
-	url = https://github.com/osqzss/bladeGPS.git
+	url = https://github.com/ShingoNishimoto/bladeGPS.git
 [submodule "bladeRF"]
 	path = bladeRF
 	url = https://github.com/Nuand/bladeRF
 [submodule "gr-osmosdr"]
 	path = gr-osmosdr
-	url = https://github.com/osmocom/gr-osmosdr.git
+	url = https://github.com/ShingoNishimoto/gr-osmosdr_for_gpssim.git
