@@ -45,18 +45,27 @@ N_UTM = []
 utm_zone = []
 
 # ---------- CHANGE HERE:
-samplingFreq = 3e6
-channels = 5
-path = '/home/junichiro/work/gnss_sim_receiver/test/'
+# samplingFreq = 3e6
+# channels = 8
+path = '/home/junichiro/work/gnss_sim_receiver/test/on_ground/'
 pvt_raw_log_path = path + 'pvt.dat'
 nav_sol_period = 10
 plot_skyplot = 0
+coord = 'ECEF'
 
-settings['true_position'] = {'E_UTM':np.nan,'N_UTM':np.nan,'U_UTM':np.nan}
+# FIXME: should be read from file. add llh, it is easier?
+settings['true_position'] = {'E_UTM':np.nan,'N_UTM':np.nan,'U_UTM':np.nan,
+                             'X_ECEF':-3698470, 'Y_ECEF':3698470, 'Z_ECEF':3637867} # 35, 135, 0
+                            #  'X_ECEF':-287352736.0, 'Y_ECEF':287352736.0, 'Z_ECEF':0.0} # 0, 135, 4e8
 settings['navSolPeriod'] = nav_sol_period
 
 navSolutions = gps_l1_ca_read_pvt_dump(pvt_raw_log_path)
+# NOTE: this is in ECEF
 X, Y, Z = navSolutions['X'], navSolutions['Y'], navSolutions['Z']
+# copy
+navSolutions['X_ECEF'] = X
+navSolutions['Y_ECEF'] = Y
+navSolutions['Z_ECEF'] = Z
 
 utm_coords = []
 
@@ -91,11 +100,11 @@ for i in range(len(navSolutions['longitude'])):
 
 navSolutions['E_UTM'] = E_UTM
 navSolutions['N_UTM'] = N_UTM
-navSolutions['U_UTM'] = navSolutions['Z']
+navSolutions['U_UTM'] = Z
 
-plotNavigation(navSolutions,settings,plot_skyplot)
+plotNavigation(navSolutions, settings, path, coord, plot_skyplot)
 
 # OPTIONAL: Other plots ->
-plot_position(navSolutions)
-plot_oneVStime(navSolutions, 'X_vel')
-plot_oneVStime(navSolutions, 'Tot_Vel')
+plot_position(navSolutions, path)
+# plot_oneVStime(navSolutions, 'X_vel', path)
+plot_oneVStime(navSolutions, 'Tot_Vel', path)

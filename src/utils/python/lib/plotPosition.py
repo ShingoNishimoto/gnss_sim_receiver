@@ -48,16 +48,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plot_position(navSolutions):
+def plot_position(navSolutions, path):
 
     # ---------- CHANGE HERE:
-    fig_path = '/home/junichiro/work/gnss_sim_receiver/test/'
-    fig_path_maps = fig_path + 'maps/'
+    fig_path = path + 'figure/'
+    fig_path_maps = fig_path
     filename_map = 'mapPlotPosition.html'
     filename_map_t = 'mapTerrainPotPosition.html'
 
-    if not os.path.exists(fig_path_maps):
-        os.mkdir(fig_path_maps)
+    if not os.path.exists(fig_path):
+        os.mkdir(fig_path)
 
     # Statics Positions:
     m_lat = sum(navSolutions['latitude']) / len(navSolutions['latitude'])
@@ -121,14 +121,15 @@ def plot_position(navSolutions):
     plt.suptitle(f'Plot file PVT process data results')
 
     # Latitude and Longitude
-    plt.subplot(1, 2, 1)
-    scatter = plt.scatter(navSolutions['latitude'], navSolutions['longitude'],
+    ax = plt.subplot(1, 2, 1)
+    plt.ticklabel_format(style='plain', axis='both', useOffset=False)
+    scatter = ax.scatter(navSolutions['latitude'], navSolutions['longitude'],
                           c=time, marker='.')
     plt.grid()
-    plt.ticklabel_format(style='plain', axis='both', useOffset=False)
-    plt.title('Positions latitud-longitud')
-    plt.xlabel('Latitude º')
-    plt.ylabel('Longitude º')
+    ax.set_title('Positions latitud-longitud')
+    ax.set_xlabel('Latitude º')
+    ax.set_ylabel('Longitude º')
+    ax.set_aspect('equal')
     plt.axis('tight')
 
     # Colors
@@ -148,16 +149,17 @@ def plot_position(navSolutions):
     ax.set_ylabel('Eje Y [m]')
     ax.set_zlabel('Eje Z [m]')
     ax.set_title('Positions x-y-z')
+    ax.set_aspect('equal')
 
     plt.tight_layout()
     plt.savefig(os.path.join(fig_path, f'PVT_ProcessDataResults.png'))
     plt.show()
 
 
-def plot_oneVStime(navSolutions, name):
+def plot_oneVStime(navSolutions, name, path):
 
     # ---------- CHANGE HERE:
-    fig_path = '/home/junichiro/work/gnss_sim_receiver/test/'
+    fig_path = path + 'figure/'
     if not os.path.exists(fig_path):
         os.mkdir(fig_path)
 

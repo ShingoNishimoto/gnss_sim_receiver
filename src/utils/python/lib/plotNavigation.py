@@ -38,24 +38,33 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plotNavigation(navSolutions, settings, plot_skyplot=0):
+def plotNavigation(navSolutions, settings, path, coord='UTM', plot_skyplot=0):
 
     # ---------- CHANGE HERE:
-    fig_path = '/home/junichiro/work/gnss_sim_receiver/test/'
+    fig_path = path + 'figure/'
 
     if not os.path.exists(fig_path):
         os.makedirs(fig_path)
 
+    if coord == 'UTM':
+        position_label = ['E_UTM', 'N_UTM', 'U_UTM']
+        axis_label = ['East[m]', 'North[m]', 'Up[m]']
+    elif coord == 'ECEF':
+        position_label = ['X_ECEF', 'Y_ECEF', 'Z_ECEF']
+        axis_label = ['X[m]', 'Y[m]', 'Z[m]']
+    else:
+        exit()
+
     if navSolutions:
-        if (np.isnan(settings['true_position']['E_UTM']) or
-                np.isnan(settings['true_position']['N_UTM']) or
-                np.isnan(settings['true_position']['U_UTM'])):
+        if (np.isnan(settings['true_position'][position_label[0]]) or
+                np.isnan(settings['true_position'][position_label[1]]) or
+                np.isnan(settings['true_position'][position_label[2]])):
 
             # Compute mean values
             ref_coord = {
-                'E_UTM': np.nanmean(navSolutions['E_UTM']),
-                'N_UTM': np.nanmean(navSolutions['N_UTM']),
-                'U_UTM': np.nanmean(navSolutions['U_UTM'])
+                position_label[0]: np.nanmean(navSolutions[position_label[0]]),
+                position_label[1]: np.nanmean(navSolutions[position_label[1]]),
+                position_label[2]: np.nanmean(navSolutions[position_label[2]])
             }
 
             mean_latitude = np.nanmean(navSolutions['latitude'])
@@ -68,21 +77,21 @@ def plotNavigation(navSolutions, settings, plot_skyplot=0):
         else:
             # Compute the mean error for static receiver
             ref_coord = {
-                'E_UTM': settings.truePosition['E_UTM'],
-                'N_UTM': settings.truePosition['N_UTM'],
-                'U_UTM': settings.truePosition['U_UTM']
+                position_label[0]: settings['true_position'][position_label[0]],
+                position_label[1]: settings['true_position'][position_label[1]],
+                position_label[2]: settings['true_position'][position_label[2]]
             }
 
             mean_position = {
-                'E_UTM': np.nanmean(navSolutions['E_UTM']),
-                'N_UTM': np.nanmean(navSolutions['N_UTM']),
-                'U_UTM': np.nanmean(navSolutions['U_UTM'])
+                position_label[0]: np.nanmean(navSolutions[position_label[0]]),
+                position_label[1]: np.nanmean(navSolutions[position_label[1]]),
+                position_label[2]: np.nanmean(navSolutions[position_label[2]])
             }
 
             error_meters = np.sqrt(
-                (mean_position['E_UTM'] - ref_coord['E_UTM']) ** 2 +
-                (mean_position['N_UTM'] - ref_coord['N_UTM']) ** 2 +
-                (mean_position['U_UTM'] - ref_coord['U_UTM']) ** 2)
+                (mean_position[position_label[0]] - ref_coord[position_label[0]]) ** 2 +
+                (mean_position[position_label[1]] - ref_coord[position_label[1]]) ** 2 +
+                (mean_position[position_label[2]] - ref_coord[position_label[2]]) ** 2)
 
             ref_point_lg_text = (f"Reference Position, Mean 3D error = "
                                  f"{error_meters} [m]")
@@ -90,25 +99,25 @@ def plotNavigation(navSolutions, settings, plot_skyplot=0):
         #Create plot and subplots
         plt.figure(figsize=(1920 / 120, 1080 / 120))
         plt.clf()
-        plt.title('Navigation solutions',fontweight='bold')
+        # plt.title('Navigation solutions',fontweight='bold')
 
         ax1 = plt.subplot(4, 2, (1, 4))
         ax2 = plt.subplot(4, 2, (5, 7), projection='3d')
         ax3 = plt.subplot(4, 2, (6, 8), projection='3d')
 
-        #  (ax1) Coordinate differences in UTM system from reference point
-        ax1.plot(np.vstack([navSolutions['E_UTM'] - ref_coord['E_UTM'],
-                            navSolutions['N_UTM'] - ref_coord['N_UTM'],
-                            navSolutions['U_UTM'] - ref_coord['U_UTM']]).T)
-        ax1.set_title('Coordinates variations in UTM system', fontweight='bold')
-        ax1.legend(['E_UTM', 'N_UTM', 'U_UTM'])
+        #  (ax1) Coordinate differences in the system from reference point
+        ax1.plot(np.vstack([np.array(navSolutions[position_label[0]]) - ref_coord[position_label[0]],
+                    np.array(navSolutions[position_label[1]]) - ref_coord[position_label[1]],
+                    np.array(navSolutions[position_label[2]]) - ref_coord[position_label[2]]]).T)
+        ax1.set_title('Coordinates variations in ' + coord + ' system', fontweight='bold')
+        ax1.legend([position_label[0], position_label[1], position_label[2]])
         ax1.set_xlabel(f"Measurement period: {settings['navSolPeriod']} ms")
         ax1.set_ylabel('Variations (m)')
         ax1.grid(True)
         ax1.axis('tight')
 
         # (ax2) Satellite sky plot
-        if plot_skyplot: #todo posicion de los satelites
+        if plot_skyplot: #TODO: posicion de los satelites
             skyPlot(ax2, navSolutions['channel']['az'],
                     navSolutions['channel']['el'],
                     navSolutions['channel']['PRN'][:, 0])
@@ -116,20 +125,20 @@ def plotNavigation(navSolutions, settings, plot_skyplot=0):
                           f'{np.nanmean(navSolutions["DOP"][1, :]):.1f})',
                           fontweight='bold')
 
-        # (ax3) Position plot in UTM system
-        ax3.scatter(navSolutions['E_UTM'] - ref_coord['E_UTM'],
-                    navSolutions['N_UTM'] - ref_coord['N_UTM'],
-                    navSolutions['U_UTM'] - ref_coord['U_UTM'], marker='+')
+        # (ax3) Position plot in the system
+        ax3.scatter(np.array(navSolutions[position_label[0]]) - ref_coord[position_label[0]],
+                    np.array(navSolutions[position_label[1]]) - ref_coord[position_label[1]],
+                    np.array(navSolutions[position_label[2]]) - ref_coord[position_label[2]], marker='+')
         ax3.scatter([0], [0], [0], color='r', marker='+', linewidth=1.5)
         ax3.view_init(0, 90)
         ax3.set_box_aspect([1, 1, 1])
         ax3.grid(True, which='minor')
         ax3.legend(['Measurements', ref_point_lg_text])
-        ax3.set_title('Positions in UTM system (3D plot)',fontweight='bold')
-        ax3.set_xlabel('East (m)')
-        ax3.set_ylabel('North (m)')
-        ax3.set_zlabel('Upping (m)')
+        ax3.set_title('Positions in ' + coord + ' system (3D plot)',fontweight='bold')
+        ax3.set_xlabel(axis_label[0])
+        ax3.set_ylabel(axis_label[1])
+        ax3.set_zlabel(axis_label[2])
 
         plt.tight_layout()
-        plt.savefig(os.path.join(fig_path, 'measures_UTM.png'))
+        plt.savefig(os.path.join(fig_path, 'measures_' + coord + '.png'))
         plt.show()
