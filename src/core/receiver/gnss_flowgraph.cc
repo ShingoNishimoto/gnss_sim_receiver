@@ -2160,6 +2160,7 @@ void GNSSFlowgraph::set_signals_list()
     // Set a sequential list of GNSS satellites
     std::set<unsigned int>::const_iterator available_gnss_prn_iter;
 
+    // NOTE: for gps_satellites, use those PRN lists. for AOWR, indicate in the configuration file.
     // Create the lists of GNSS satellites
     std::set<unsigned int> available_gps_prn = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
         11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,

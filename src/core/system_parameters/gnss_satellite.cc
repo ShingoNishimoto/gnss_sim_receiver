@@ -178,7 +178,8 @@ void Gnss_Satellite::set_PRN(uint32_t PRN_)
         }
     if (system == "GPS")
         {
-            if (PRN_ < 1 or PRN_ > 32)
+            // if (PRN_ < 1 or PRN_ > 32)
+            if (PRN_ < 1 or PRN_ > 210)
                 {
                     DLOG(INFO) << "This PRN is not defined";
                     PRN = 0;
