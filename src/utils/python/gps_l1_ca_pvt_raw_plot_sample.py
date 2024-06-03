@@ -51,12 +51,12 @@ path = '/home/junichiro/work/gnss_sim_receiver/test/on_ground/'
 pvt_raw_log_path = path + 'pvt.dat'
 nav_sol_period = 10
 plot_skyplot = 0
-coord = 'ECEF'
 
 # FIXME: should be read from file. add llh, it is easier?
-settings['true_position'] = {'E_UTM':np.nan,'N_UTM':np.nan,'U_UTM':np.nan,
-                             'X_ECEF':-3698470, 'Y_ECEF':3698470, 'Z_ECEF':3637867} # 35, 135, 0
-                            #  'X_ECEF':-287352736.0, 'Y_ECEF':287352736.0, 'Z_ECEF':0.0} # 0, 135, 4e8
+settings['true_position'] = {
+                            # 'E_UTM':np.nan,'N_UTM':np.nan,'U_UTM':np.nan, 'X_ECEF':-4474292, 'Y_ECEF':2675793, 'Z_ECEF':-3663100} # Birch building -35.274508, 149.119008, 568
+                            'E_UTM':500000,'N_UTM':3873043.06,'U_UTM':0, 'X_ECEF':-3698470, 'Y_ECEF':3698470, 'Z_ECEF':3637867} # 35, 135, 0
+                            # 'E_UTM':500000,'N_UTM':0,'U_UTM':4e8, 'X_ECEF':-287352736.0, 'Y_ECEF':287352736.0, 'Z_ECEF':0.0} # 0, 135, 4e8
 settings['navSolPeriod'] = nav_sol_period
 
 navSolutions = gps_l1_ca_read_pvt_dump(pvt_raw_log_path)
@@ -85,8 +85,6 @@ for i in range(len(utm_coords)):
 input_projection = pyproj.CRS.from_string("+proj=longlat "
                                           "+datum=WGS84 +no_defs")
 
-utm_e = []
-utm_n = []
 for i in range(len(navSolutions['longitude'])):
     output_projection = pyproj.CRS (f"+proj=utm +zone={utm_zone[i]} "
                                     f"+datum=WGS84 +units=m +no_defs")
@@ -97,12 +95,22 @@ for i in range(len(navSolutions['longitude'])):
     E_UTM.append(utm_e)
     N_UTM.append(utm_n)
 
+# For up
+U_UTM = []
+transformer = pyproj.Transformer.from_crs(
+    {"proj":'geocent', "ellps":'WGS84', "datum":'WGS84'},
+    {"proj":'latlong', "ellps":'WGS84', "datum":'WGS84'},
+    )
+for i in range(len(X)):
+    lon, lat, alt = transformer.transform(X[i], Y[i], Z[i])
+    U_UTM.append(alt)
 
 navSolutions['E_UTM'] = E_UTM
 navSolutions['N_UTM'] = N_UTM
-navSolutions['U_UTM'] = Z
+navSolutions['U_UTM'] = U_UTM
 
-plotNavigation(navSolutions, settings, path, coord, plot_skyplot)
+plotNavigation(navSolutions, settings, path, 'UTM', plot_skyplot)
+plotNavigation(navSolutions, settings, path, 'ECEF', plot_skyplot)
 
 # OPTIONAL: Other plots ->
 plot_position(navSolutions, path)
