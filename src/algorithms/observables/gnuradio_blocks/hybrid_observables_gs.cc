@@ -65,6 +65,7 @@ hybrid_observables_gs::hybrid_observables_gs(const Obs_Conf &conf_)
       d_smooth_filter_M(static_cast<double>(conf_.smoothing_factor)),
       d_T_rx_step_s(static_cast<double>(conf_.observable_interval_ms) / 1000.0),
       d_last_rx_clock_round20ms_error(0.0),
+      d_ps_channel_id(conf_.ps_channel_id),
       d_T_rx_TOW_ms(0U),
       d_T_rx_step_ms(conf_.observable_interval_ms),
       d_T_status_report_timer_ms(0),
@@ -545,10 +546,15 @@ void hybrid_observables_gs::compute_pranges(std::vector<Gnss_Synchro> &data) con
             if (it->Flag_valid_word)
                 {
                     double traveltime_ms = current_T_rx_TOW_ms - it->interp_TOW_ms;
-                    if (fabs(traveltime_ms) > 302400)  // check TOW roll over
+                    // For pseudo satellite
+                    if (it->Channel_ID != d_ps_channel_id)
                         {
-                            traveltime_ms = 604800000.0 + current_T_rx_TOW_ms - it->interp_TOW_ms;
+                            if (fabs(traveltime_ms) > 302400)  // check TOW roll over
+                                {
+                                    traveltime_ms = 604800000.0 + current_T_rx_TOW_ms - it->interp_TOW_ms;
+                                }
                         }
+
                     it->RX_time = current_T_rx_TOW_s;
                     it->Pseudorange_m = traveltime_ms * SPEED_OF_LIGHT_M_MS;
                     it->Flag_valid_pseudorange = true;

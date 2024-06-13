@@ -100,6 +100,7 @@ private:
     int32_t d_preamble_period_symbols;
     int32_t d_CRC_error_counter;
     int32_t d_channel;
+    int32_t d_ps_channel;
 
     uint32_t d_required_symbols;
     uint32_t d_prev_GPS_frame_4bytes;
@@ -118,6 +119,7 @@ private:
     bool d_remove_dat;
     bool d_enable_navdata_monitor;
     bool d_dump_crc_stats;
+    bool d_hybrid_mode;
 };
 
 
