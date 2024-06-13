@@ -172,7 +172,8 @@ private:
     bool save_gnss_synchro_map_xml(const std::string& file_name);  // debug helper function
     bool load_gnss_synchro_map_xml(const std::string& file_name);  // debug helper function
 
-    void write_rx_clock_bias(const double rx_clock_offset_s, const double tag_tow_s, uint32_t PRN);
+    void write_rx_clock_bias(const double rx_clock_offset_s, const double tag_tow_s, const uint32_t PRN);
+    void write_clock_difference(const double clock_diff_s, const double tag_tow_s);
 
     std::fstream d_log_timetag_file;
 
@@ -255,6 +256,7 @@ private:
     int32_t d_display_rate_ms;
     int32_t d_report_rate_ms;
     int32_t d_max_obs_block_rx_clock_offset_ms;
+    int32_t d_ps_channel;
 
     uint32_t d_nchannels;
     uint32_t d_type_of_rx;
@@ -283,17 +285,25 @@ private:
     bool d_use_has_corrections;
     bool d_use_unhealthy_sats;
     bool d_share_rx_clock_bias;
+    bool d_hybrid_mode;
 
     // for mmap
-    struct rx_clock_bias_mmap
+    typedef struct
     {
         int fd = 0;
         char* mapped_arr = NULL;
         off_t current_offset = 0;
-        uint32_t length = 0x5FB4; // 24500B (= 49 * 500)
-        const uint8_t size_one_line = 49; // Bytes
-    };
-    struct rx_clock_bias_mmap d_mmap_params;
+        uint32_t length;
+        const uint8_t size_one_line;
+    } sharing_info_mmap;
+    sharing_info_mmap d_mmap_rx_clock_bias  = { 0, NULL, 0,
+                                                24500,  // (= 49 * 500)
+                                                49  // Bytes
+                                              };
+    sharing_info_mmap d_mmap_clock_diff = { 0, NULL, 0,
+                                            3400,  // (= 34 * 100)
+                                            34  // Bytes
+                                          };
 };
 
 

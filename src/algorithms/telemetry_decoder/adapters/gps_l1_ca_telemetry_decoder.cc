@@ -31,6 +31,10 @@ GpsL1CaTelemetryDecoder::GpsL1CaTelemetryDecoder(
 {
     DLOG(INFO) << "role " << role;
     tlm_parameters_.SetFromConfiguration(configuration, role);
+    // For hybrid mode
+    tlm_parameters_.hybrid_mode = configuration->property("GNSS-SDR.hybrid_mode", false);
+    tlm_parameters_.ps_channel_id = configuration->property("GNSS-SDR.pseudo_sat_ch_id", tlm_parameters_.ps_channel_id);
+
     // make telemetry decoder object
     telemetry_decoder_ = gps_l1_ca_make_telemetry_decoder_gs(satellite_, tlm_parameters_);
     DLOG(INFO) << "telemetry_decoder(" << telemetry_decoder_->unique_id() << ")";

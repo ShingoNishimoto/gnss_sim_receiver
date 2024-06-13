@@ -102,6 +102,7 @@ private:
     double d_T_rx_step_s;
     double d_last_rx_clock_round20ms_error;
 
+    int32_t d_ps_channel_id;
     uint32_t d_T_rx_TOW_ms;
     uint32_t d_T_rx_step_ms;
     uint32_t d_T_status_report_timer_ms;

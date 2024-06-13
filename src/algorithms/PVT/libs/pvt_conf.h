@@ -66,6 +66,7 @@ public:
     int32_t rinexobs_rate_ms = 0;
     int32_t an_rate_ms = 20;
     int32_t max_obs_block_rx_clock_offset_ms = 40;
+    int32_t pseudo_sat_channel = -1;
     int udp_port = 0;
     int udp_eph_port = 0;
     int rtk_trace_level = 0;
@@ -100,6 +101,7 @@ public:
     bool use_unhealthy_sats = false;
     bool rec_antenna_attitude_fix = true;
     bool share_rx_clock_bias = false;
+    bool hybrid_mode = false;
 
     // PVT KF parameters
     bool enable_pvt_kf = false;

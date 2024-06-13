@@ -163,6 +163,7 @@ rtklib_pvt_gs::rtklib_pvt_gs(uint32_t nchannels,
       d_display_rate_ms(conf_.display_rate_ms),
       d_report_rate_ms(1000),
       d_max_obs_block_rx_clock_offset_ms(conf_.max_obs_block_rx_clock_offset_ms),
+      d_ps_channel(conf_.pseudo_sat_channel),
       d_nchannels(nchannels),
       d_type_of_rx(conf_.type_of_receiver),
       d_observable_interval_ms(conf_.observable_interval_ms),
@@ -185,7 +186,8 @@ rtklib_pvt_gs::rtklib_pvt_gs(uint32_t nchannels,
       d_log_timetag(conf_.log_source_timetag),
       d_use_has_corrections(conf_.use_has_corrections),
       d_use_unhealthy_sats(conf_.use_unhealthy_sats),
-      d_share_rx_clock_bias(conf_.share_rx_clock_bias)
+      d_share_rx_clock_bias(conf_.share_rx_clock_bias),
+      d_hybrid_mode(conf_.hybrid_mode)
 {
     // Send feedback message to observables block with the receiver clock offset
     this->message_port_register_out(pmt::mp("pvt_to_observables"));
@@ -579,35 +581,70 @@ rtklib_pvt_gs::rtklib_pvt_gs(uint32_t nchannels,
     if (d_share_rx_clock_bias)
         {
             // open file TODO: need to change the directory for sharing
-            if ((d_mmap_params.fd = open("./rx_clock_bias.txt", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR)) < 0)
+            if ((d_mmap_rx_clock_bias.fd = open("./rx_clock_bias.txt", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR)) < 0)
                 {
                     std::cerr << "Rx clock bias file cannot be created: " << strerror(errno) << '\n';
                     exit(EXIT_FAILURE);
                 }
 
             // strech the file size to the size of the mmapped array
-            if (lseek(d_mmap_params.fd, d_mmap_params.length - 1, SEEK_SET) == -1)
+            if (lseek(d_mmap_rx_clock_bias.fd, d_mmap_rx_clock_bias.length - 1, SEEK_SET) == -1)
                 {
                     std::cerr << "Failed to strech the file size: " << strerror(errno) << '\n';
                     exit(EXIT_FAILURE);
                 }
             // Write zero byte at the end of the streched file
-            if (write(d_mmap_params.fd, "", 1) == -1)
+            if (write(d_mmap_rx_clock_bias.fd, "", 1) == -1)
                 {
-                    close(d_mmap_params.fd);
+                    close(d_mmap_rx_clock_bias.fd);
                     std::cerr << "Error writing last byte of the file" << strerror(errno) << '\n';
                 }
             // mapping
-            if ((d_mmap_params.mapped_arr = reinterpret_cast<char*>(mmap(NULL, d_mmap_params.length, PROT_WRITE | PROT_READ, MAP_SHARED_VALIDATE, d_mmap_params.fd, 0))) == MAP_FAILED)
+            if ((d_mmap_rx_clock_bias.mapped_arr = reinterpret_cast<char*>(mmap(NULL, d_mmap_rx_clock_bias.length, PROT_WRITE | PROT_READ, MAP_SHARED_VALIDATE, d_mmap_rx_clock_bias.fd, 0))) == MAP_FAILED)
                 {
-                    close(d_mmap_params.fd);
+                    close(d_mmap_rx_clock_bias.fd);
                     std::cerr << "Failed to mmap: " << strerror(errno) << '\n';
                     exit(EXIT_FAILURE);
                 }
             // fill with space
-            for (u_int32_t i = 0; i < d_mmap_params.length; i++)
+            for (u_int32_t i = 0; i < d_mmap_rx_clock_bias.length; i++)
                 {
-                    d_mmap_params.mapped_arr[i] = ' ';
+                    d_mmap_rx_clock_bias.mapped_arr[i] = ' ';
+                }
+        }
+
+    if (d_hybrid_mode)
+        {
+            // open file TODO: need to change the directory for sharing
+            if ((d_mmap_clock_diff.fd = open("./clock_diff.txt", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR)) < 0)
+                {
+                    std::cerr << "Clock difference file cannot be created: " << strerror(errno) << '\n';
+                    exit(EXIT_FAILURE);
+                }
+
+            // stretch the file size to the size of the mmapped array
+            if (lseek(d_mmap_clock_diff.fd, d_mmap_clock_diff.length - 1, SEEK_SET) == -1)
+                {
+                    std::cerr << "Failed to stretch the file size: " << strerror(errno) << '\n';
+                    exit(EXIT_FAILURE);
+                }
+            // Write zero byte at the end of the stretched file
+            if (write(d_mmap_clock_diff.fd, "", 1) == -1)
+                {
+                    close(d_mmap_clock_diff.fd);
+                    std::cerr << "Error writing last byte of the file" << strerror(errno) << '\n';
+                }
+            // mapping
+            if ((d_mmap_clock_diff.mapped_arr = reinterpret_cast<char*>(mmap(NULL, d_mmap_clock_diff.length, PROT_WRITE | PROT_READ, MAP_SHARED_VALIDATE, d_mmap_clock_diff.fd, 0))) == MAP_FAILED)
+                {
+                    close(d_mmap_clock_diff.fd);
+                    std::cerr << "Failed to mmap: " << strerror(errno) << '\n';
+                    exit(EXIT_FAILURE);
+                }
+            // fill with space
+            for (u_int32_t i = 0; i < d_mmap_clock_diff.length; i++)
+                {
+                    d_mmap_clock_diff.mapped_arr[i] = ' ';
                 }
         }
 
@@ -1179,15 +1216,29 @@ rtklib_pvt_gs::~rtklib_pvt_gs()
             if (d_share_rx_clock_bias)
                 {
                     // unmap
-                    if (munmap(d_mmap_params.mapped_arr, d_mmap_params.length) == -1)
+                    if (munmap(d_mmap_rx_clock_bias.mapped_arr, d_mmap_rx_clock_bias.length) == -1)
                         {
                             std::cerr << "Cannot unmap: " << strerror(errno) << '\n';
                         }
 
                     // close file
-                    if (close(d_mmap_params.fd) == -1)
+                    if (close(d_mmap_rx_clock_bias.fd) == -1)
                         {
                             std::cerr << "Rx clock bias file cannot be closed: " << strerror(errno) << '\n';
+                        }
+                }
+            if (d_hybrid_mode)
+                {
+                    // unmap
+                    if (munmap(d_mmap_clock_diff.mapped_arr, d_mmap_clock_diff.length) == -1)
+                        {
+                            std::cerr << "Cannot unmap: " << strerror(errno) << '\n';
+                        }
+
+                    // close file
+                    if (close(d_mmap_clock_diff.fd) == -1)
+                        {
+                            std::cerr << "Clock difference file cannot be closed: " << strerror(errno) << '\n';
                         }
                 }
         }
@@ -1985,7 +2036,7 @@ void rtklib_pvt_gs::update_HAS_corrections()
         }
 }
 
-void rtklib_pvt_gs::write_rx_clock_bias(const double rx_clock_offset_s, const double tag_tow_s, uint32_t PRN)
+void rtklib_pvt_gs::write_rx_clock_bias(const double rx_clock_offset_s, const double tag_tow_s, const uint32_t PRN)
 {
     std::stringstream stream;
     // convert Rx time from double to string
@@ -1998,6 +2049,7 @@ void rtklib_pvt_gs::write_rx_clock_bias(const double rx_clock_offset_s, const do
             str_rx_time_s = std::string(9 - str_rx_time_s.size(), '0') + str_rx_time_s;
         }
     stream.str("");
+    // FIXME: should be 1n 15 digits, so 16 characters.
     // convert tow from double to string (in 17 characters including point)
     const uint8_t fixed_char_num = 17;
     stream << std::setprecision(15) << tag_tow_s;
@@ -2028,16 +2080,55 @@ void rtklib_pvt_gs::write_rx_clock_bias(const double rx_clock_offset_s, const do
     std::string str_one_line = str_rx_time_s + std::string(",") + str_tag_tow_s + std::string(",") + str_rx_clock_bias_s + std::string(",") + str_PRN + std::string("\n");
 
     // write as if the file were memory (an array).
-    for (int i = 0; i < d_mmap_params.size_one_line; i++)
+    for (int i = 0; i < d_mmap_rx_clock_bias.size_one_line; i++)
         {
-            d_mmap_params.mapped_arr[d_mmap_params.current_offset + i] = str_one_line.at(i);
+            d_mmap_rx_clock_bias.mapped_arr[d_mmap_rx_clock_bias.current_offset + i] = str_one_line.at(i);
         }
 
     // update offset
-    d_mmap_params.current_offset += d_mmap_params.size_one_line;
-    if (d_mmap_params.current_offset >= d_mmap_params.size_one_line * 500)
+    d_mmap_rx_clock_bias.current_offset += d_mmap_rx_clock_bias.size_one_line;
+    if (d_mmap_rx_clock_bias.current_offset >= d_mmap_rx_clock_bias.length)
         {
-            d_mmap_params.current_offset = 0;
+            d_mmap_rx_clock_bias.current_offset = 0;
+        }
+}
+
+void rtklib_pvt_gs::write_clock_difference(const double clock_diff_s, const double tag_tow_s)
+{
+    std::stringstream stream;
+    // convert tow from double to string (in 16 characters including point)
+    const uint8_t fixed_char_num = 16;
+    stream << std::setprecision(15) << std::setw(fixed_char_num) << tag_tow_s;
+    std::string str_tag_tow_s = stream.str();
+    if (str_tag_tow_s.size() > fixed_char_num)
+        {
+            // erase characters.
+            str_tag_tow_s.erase(fixed_char_num, str_tag_tow_s.size() - fixed_char_num);
+        }
+    stream.str("");
+    // convert clock difference from double to string (in 16 characters including point)
+    stream << std::setprecision(15) << std::setw(fixed_char_num) << clock_diff_s;
+    std::string str_clock_diff_s = stream.str();
+    if (str_clock_diff_s.size() > fixed_char_num)
+        {
+            // erase characters.
+            str_clock_diff_s.erase(fixed_char_num, str_clock_diff_s.size() - fixed_char_num);
+        }
+    stream.str("");
+
+    std::string str_one_line = str_tag_tow_s + std::string(",") + str_clock_diff_s + std::string("\n");
+
+    // write as if the file were memory (an array).
+    for (int i = 0; i < d_mmap_clock_diff.size_one_line; i++)
+        {
+            d_mmap_clock_diff.mapped_arr[d_mmap_clock_diff.current_offset + i] = str_one_line.at(i);
+        }
+
+    // update offset
+    d_mmap_clock_diff.current_offset += d_mmap_clock_diff.size_one_line;
+    if (d_mmap_clock_diff.current_offset >= d_mmap_clock_diff.length)
+        {
+            d_mmap_clock_diff.current_offset = 0;
         }
 }
 
@@ -2202,6 +2293,21 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                     else
                         {
                             d_channel_initialized.at(i) = false;  // the current channel is not reporting valid observable
+                        }
+                }
+
+            // Get information for hybrid mode
+            static double pseudorange_pseudo_sat_m = 0;
+            static double tx_tow_pseudo_sat_s = 0;
+            if (d_hybrid_mode && (d_ps_channel != -1) && !d_gnss_observables_map.empty())
+                {
+                    auto itr = d_gnss_observables_map.find(d_ps_channel);
+                    if (itr != d_gnss_observables_map.end())
+                        {
+                            auto pseudo_sat_observable = std::move(itr->second);
+                            d_gnss_observables_map.erase(itr);
+                            pseudorange_pseudo_sat_m = pseudo_sat_observable.Pseudorange_m;
+                            tx_tow_pseudo_sat_s = pseudo_sat_observable.interp_TOW_ms * 1e-3;
                         }
                 }
 
@@ -2528,6 +2634,12 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                                                 tag_tow_s_at_ch0 = this->d_gnss_observables_map.begin()->second.interp_TOW_ms / 1000.0;
                                             }
                                             write_rx_clock_bias(Rx_clock_offset_s, tag_tow_s_at_ch0, this->d_gnss_observables_map.begin()->second.PRN);
+                                        }
+                                    if (d_hybrid_mode && (d_ps_channel != -1) && (pseudorange_pseudo_sat_m != 0))
+                                        {
+                                            // TODO: set output rate
+                                            double clock_diff_s = (pseudorange_pseudo_sat_m / SPEED_OF_LIGHT_M_S) - Rx_clock_offset_s;
+                                            write_clock_difference(clock_diff_s, tx_tow_pseudo_sat_s);
                                         }
                                 }
                         }

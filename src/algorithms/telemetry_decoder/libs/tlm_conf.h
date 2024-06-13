@@ -44,6 +44,8 @@ public:
     bool enable_navdata_monitor{false};
     bool there_are_e6_channels{false};
     bool use_ced{false};
+    bool hybrid_mode{false};
+    int32_t ps_channel_id{-1};
 };
 
 

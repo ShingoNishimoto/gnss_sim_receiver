@@ -44,6 +44,7 @@ HybridObservables::HybridObservables(const ConfigurationInterface* configuration
     conf.enable_carrier_smoothing = configuration->property(role + ".enable_carrier_smoothing", conf.enable_carrier_smoothing);
     conf.always_output_gs = configuration->property("PVT.an_output_enabled", conf.always_output_gs) || configuration->property(role + ".always_output_gs", conf.always_output_gs);
     conf.enable_E6 = configuration->property("PVT.use_e6_for_pvt", conf.enable_E6);
+    conf.ps_channel_id = configuration->property("GNSS-SDR.pseudo_sat_ch_id", conf.ps_channel_id);
 
     if (FLAGS_carrier_smoothing_factor == DEFAULT_CARRIER_SMOOTHING_FACTOR)
         {

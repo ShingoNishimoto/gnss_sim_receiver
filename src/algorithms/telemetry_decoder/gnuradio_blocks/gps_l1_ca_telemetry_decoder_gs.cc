@@ -81,6 +81,7 @@ gps_l1_ca_telemetry_decoder_gs::gps_l1_ca_telemetry_decoder_gs(
                             d_preamble_period_symbols(GPS_SUBFRAME_BITS),
                             d_CRC_error_counter(0),
                             d_channel(0),
+                            d_ps_channel(conf.ps_channel_id),
                             d_required_symbols(GPS_SUBFRAME_BITS),
                             d_prev_GPS_frame_4bytes(0),
                             d_stat(0),
@@ -95,7 +96,8 @@ gps_l1_ca_telemetry_decoder_gs::gps_l1_ca_telemetry_decoder_gs(
                             d_dump_mat(conf.dump_mat),
                             d_remove_dat(conf.remove_dat),
                             d_enable_navdata_monitor(conf.enable_navdata_monitor),
-                            d_dump_crc_stats(conf.dump_crc_stats)
+                            d_dump_crc_stats(conf.dump_crc_stats),
+                            d_hybrid_mode(conf.hybrid_mode)
 {
     // prevent telemetry symbols accumulation in output buffers
     this->set_max_noutput_items(1);
@@ -349,54 +351,69 @@ bool gps_l1_ca_telemetry_decoder_gs::decode_subframe(double cn0, bool flag_inver
                         }
                     d_nav_msg_packet.nav_message = subframe_bits.to_string();
                 }
+            // TODO: add different decoder for AOWR tlm.
             const int32_t subframe_ID = d_nav.subframe_decoder(subframe.data());  // decode the subframe
             if (subframe_ID > 0 && subframe_ID < 6)
                 {
-                    switch (subframe_ID)
+                    if (d_hybrid_mode && this->d_channel == d_ps_channel)
                         {
-                        case 1:
+                            // All subframes have the same information
                             if (d_nav.satellite_validation() == true)
                                 {
+                                    // TODO: prepare analyzer for AOWR tlm.
                                     // get ephemeris object for this SV (mandatory)
                                     const std::shared_ptr<Gps_Ephemeris> tmp_obj = std::make_shared<Gps_Ephemeris>(d_nav.get_ephemeris());
                                     this->message_port_pub(pmt::mp("telemetry"), pmt::make_any(tmp_obj));
                                 }
+                        }
+                    else
+                        {
+                            switch (subframe_ID)
+                                {
+                                case 1:
+                                    if (d_nav.satellite_validation() == true)
+                                        {
+                                            // get ephemeris object for this SV (mandatory)
+                                            const std::shared_ptr<Gps_Ephemeris> tmp_obj = std::make_shared<Gps_Ephemeris>(d_nav.get_ephemeris());
+                                            this->message_port_pub(pmt::mp("telemetry"), pmt::make_any(tmp_obj));
+                                        }
 
-                            break;
-                        case 2:
-                            if (d_nav.satellite_validation() == true)
-                                {
-                                    // get ephemeris object for this SV (mandatory)
-                                    const std::shared_ptr<Gps_Ephemeris> tmp_obj = std::make_shared<Gps_Ephemeris>(d_nav.get_ephemeris());
-                                    this->message_port_pub(pmt::mp("telemetry"), pmt::make_any(tmp_obj));
-                                }
+                                    break;
+                                case 2:
+                                    if (d_nav.satellite_validation() == true)
+                                        {
+                                            // get ephemeris object for this SV (mandatory)
+                                            const std::shared_ptr<Gps_Ephemeris> tmp_obj = std::make_shared<Gps_Ephemeris>(d_nav.get_ephemeris());
+                                            this->message_port_pub(pmt::mp("telemetry"), pmt::make_any(tmp_obj));
+                                        }
 
-                            break;
-                        case 3:  // we have a new set of ephemeris data for the current SV
-                            if (d_nav.satellite_validation() == true)
-                                {
-                                    // get ephemeris object for this SV (mandatory)
-                                    const std::shared_ptr<Gps_Ephemeris> tmp_obj = std::make_shared<Gps_Ephemeris>(d_nav.get_ephemeris());
-                                    this->message_port_pub(pmt::mp("telemetry"), pmt::make_any(tmp_obj));
+                                    break;
+                                case 3:  // we have a new set of ephemeris data for the current SV
+                                    if (d_nav.satellite_validation() == true)
+                                        {
+                                            // get ephemeris object for this SV (mandatory)
+                                            const std::shared_ptr<Gps_Ephemeris> tmp_obj = std::make_shared<Gps_Ephemeris>(d_nav.get_ephemeris());
+                                            this->message_port_pub(pmt::mp("telemetry"), pmt::make_any(tmp_obj));
+                                        }
+                                    break;
+                                case 4:  // Possible IONOSPHERE and UTC model update (page 18)
+                                    if (d_nav.get_flag_iono_valid() == true)
+                                        {
+                                            const std::shared_ptr<Gps_Iono> tmp_obj = std::make_shared<Gps_Iono>(d_nav.get_iono());
+                                            this->message_port_pub(pmt::mp("telemetry"), pmt::make_any(tmp_obj));
+                                        }
+                                    if (d_nav.get_flag_utc_model_valid() == true)
+                                        {
+                                            const std::shared_ptr<Gps_Utc_Model> tmp_obj = std::make_shared<Gps_Utc_Model>(d_nav.get_utc_model());
+                                            this->message_port_pub(pmt::mp("telemetry"), pmt::make_any(tmp_obj));
+                                        }
+                                    break;
+                                case 5:
+                                // get almanac (if available)
+                                // TODO: implement almanac reader in navigation_message
+                                default:
+                                    break;
                                 }
-                            break;
-                        case 4:  // Possible IONOSPHERE and UTC model update (page 18)
-                            if (d_nav.get_flag_iono_valid() == true)
-                                {
-                                    const std::shared_ptr<Gps_Iono> tmp_obj = std::make_shared<Gps_Iono>(d_nav.get_iono());
-                                    this->message_port_pub(pmt::mp("telemetry"), pmt::make_any(tmp_obj));
-                                }
-                            if (d_nav.get_flag_utc_model_valid() == true)
-                                {
-                                    const std::shared_ptr<Gps_Utc_Model> tmp_obj = std::make_shared<Gps_Utc_Model>(d_nav.get_utc_model());
-                                    this->message_port_pub(pmt::mp("telemetry"), pmt::make_any(tmp_obj));
-                                }
-                            break;
-                        case 5:
-                        // get almanac (if available)
-                        // TODO: implement almanac reader in navigation_message
-                        default:
-                            break;
                         }
 #if __cplusplus == 201103L
                     const int default_precision = std::cout.precision();
