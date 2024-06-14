@@ -85,6 +85,7 @@ private:
 
     size_t item_size_;
     int64_t samples_;
+    uint8_t rf_ch_num_;
 
     unsigned int in_stream_;
     unsigned int out_stream_;

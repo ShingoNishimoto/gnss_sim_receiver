@@ -45,6 +45,7 @@ OsmosdrSignalSource::OsmosdrSignalSource(const ConfigurationInterface* configura
       rf_gain_(configuration->property(role + ".rf_gain", 40.0)),
       if_bw_(configuration->property(role + ".if_bw", 0.0)),
       samples_(configuration->property(role + ".samples", static_cast<int64_t>(0))),
+      rf_ch_num_(configuration->property(role + ".RF_channels", static_cast<uint8_t>(1))),
       in_stream_(in_stream),
       out_stream_(out_stream),
       AGC_enabled_(configuration->property(role + ".AGC_enabled", true)),
@@ -63,6 +64,7 @@ OsmosdrSignalSource::OsmosdrSignalSource(const ConfigurationInterface* configura
             // For LimeSDR: Set RX antenna
             if (!antenna_.empty())
                 {
+                    // TODO: for ch1.
                     osmosdr_source_->set_antenna(antenna_, 0);
                     std::cout << "Set RX Antenna: " << osmosdr_source_->get_antenna(0) << '\n';
                     LOG(INFO) << "Set RX Antenna: " << osmosdr_source_->get_antenna(0);
@@ -92,7 +94,12 @@ OsmosdrSignalSource::OsmosdrSignalSource(const ConfigurationInterface* configura
             else
                 {
                     bool actual_agc_mode = osmosdr_source_->set_gain_mode(false);
-                    double actual_gain = osmosdr_source_->set_gain(gain_, 0);
+                    double actual_gain_rx0 = osmosdr_source_->set_gain(gain_, 0); // RX(0)
+                    double gain_rx1 = (rf_ch_num_ == 2) ? gain_ : -10;
+                    double actual_gain_rx1 = osmosdr_source_->set_gain(gain_rx1, 1); // RX(1)
+                    std::cout << "Gain is set to followings:"
+                              << "\nRX(0): " << gain_
+                              << "\nRX(1): " << gain_rx1 << std::endl;
                     // osmosdr_source_->set_if_gain(rf_gain_, 0);
                     // osmosdr_source_->set_bb_gain(if_gain_, 0);
                     // if (!osmosdr_args_.empty() && (osmosdr_args_.find("bladerf") != std::string::npos))
@@ -112,11 +119,12 @@ OsmosdrSignalSource::OsmosdrSignalSource(const ConfigurationInterface* configura
                                     std::cout << "Actual XTRX LNA Gain: " << osmosdr_source_->get_gain("LNA", 0) << " dB...\n";
                                     std::cout << "Actual XTRX TIA Gain: " << osmosdr_source_->get_gain("TIA", 0) << " dB...\n";
                                     std::cout << "Actual XTRX PGA Gain: " << osmosdr_source_->get_gain("PGA", 0) << " dB...\n";
+                                    // TODO: for ch1
                                 }
                             else
                                 {
-                                    std::cout << "Actual RX Gain: " << osmosdr_source_->get_gain() << " dB...\n";
-                                    LOG(INFO) << "Actual RX Gain: " << osmosdr_source_->get_gain() << " dB...";
+                                    // std::cout << "Actual RX Gain: " << osmosdr_source_->get_gain() << " dB...\n";
+                                    // LOG(INFO) << "Actual RX Gain: " << osmosdr_source_->get_gain() << " dB...";
                                 }
                         }
                 }
@@ -198,6 +206,17 @@ void OsmosdrSignalSource::connect(gr::top_block_sptr top_block)
                     top_block->connect(osmosdr_source_, 0, file_sink_, 0);
                     DLOG(INFO) << "connected osmosdr source to file sink";
                 }
+        }
+
+    // Check actual Rx gain here.
+    // Rx0
+    std::cout << "Actual RX Gain of CH(0): " << osmosdr_source_->get_gain(0) << " dB...\n";
+    LOG(INFO) << "Actual RX Gain of CH(0): " << osmosdr_source_->get_gain(0) << " dB...";
+    // Rx1
+    if (rf_ch_num_ == 2)
+        {
+            std::cout << "Actual RX Gain of Ch(1): " << osmosdr_source_->get_gain(1) << " dB...\n";
+            LOG(INFO) << "Actual RX Gain of Ch(1): " << osmosdr_source_->get_gain(1) << " dB...";
         }
 }
 
