@@ -74,8 +74,9 @@ Concurrent_Map<Gps_Acq_Assist> global_gps_acq_assist_map;
 int bladegps_thread(bladerf* dev, std::string args)
 {
     std::string bladegps_args_ = args;
-    char *bladegps_argv_[20] = {"bladegps", NULL, };
-    int bladegps_argc_ = 1;
+    // char *bladegps_argv_[20] = {"bladegps", NULL, };
+    char *bladegps_argv_[20] = {NULL, };
+    int bladegps_argc_ = 1;  // NOTE: start from 1 to use optarg in bladegps_main()
     char workstr[1024];
     {
         strcpy(workstr, bladegps_args_.c_str());
@@ -88,16 +89,22 @@ int bladegps_thread(bladerf* dev, std::string args)
         }
     }
     printf("Running bladeGPS with parameter:'%s'.\n", args.c_str());
-    bladegps_main(dev, bladegps_argc_, bladegps_argv_);
+    int ret = bladegps_main(dev, bladegps_argc_, bladegps_argv_);
     gflags::ShutDownCommandLineFlags();
+
+    return ret;
 }
 
-int bladerffire_thread(bladerf* dev, bladerf_trigger *trig, int sec, boost::thread* bladegps_thread)
+int bladerffire_thread(bladerf* dev, bladerf_trigger *trig, boost::thread* bladegps_thread)
 {
-    printf("Waiting...");
-    sleep(sec);
-    printf("Fire!!\n");
-    int error = bladerf_trigger_fire(dev, trig);
+    sleep(1);
+    int status = bladerf_trigger_fire(dev, trig);
+    if (status != 0)
+        {
+            fprintf(stderr, "Unable to fire trigger: %s\n", bladerf_strerror(status));
+            return 0;
+        }
+    std::cout << "Fire!!" << std::endl;
     bladegps_thread->join();
     exit(0);
 }
