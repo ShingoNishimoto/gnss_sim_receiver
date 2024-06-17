@@ -94,9 +94,20 @@ OsmosdrSignalSource::OsmosdrSignalSource(const ConfigurationInterface* configura
             else
                 {
                     bool actual_agc_mode = osmosdr_source_->set_gain_mode(false);
-                    double actual_gain_rx0 = osmosdr_source_->set_gain(gain_, 0); // RX(0)
+                    if (actual_agc_mode)
+                        {
+                            std::cerr << "AGC cannot be disabled" << std ::endl;
+                            LOG(INFO) << "AGC cannot be disabled";
+                        }
+                    else
+                        {
+                            std::cout << "AGC disabled\n";
+                            LOG(INFO) << "AGC disabled";
+                        }
+
+                    osmosdr_source_->set_gain(gain_, 0); // RX(0)
                     double gain_rx1 = (rf_ch_num_ == 2) ? gain_ : -10;
-                    double actual_gain_rx1 = osmosdr_source_->set_gain(gain_rx1, 1); // RX(1)
+                    osmosdr_source_->set_gain(gain_rx1, 1); // RX(1)
                     std::cout << "Gain is set to followings:"
                               << "\nRX(0): " << gain_
                               << "\nRX(1): " << gain_rx1 << std::endl;
