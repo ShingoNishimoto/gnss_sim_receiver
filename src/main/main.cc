@@ -205,7 +205,8 @@ int main(int argc, char** argv)
             {
                 std::cout << "... Executing bladegps_main() with an independent thread." << std::endl;
                 fLS::clstring argstring = FLAGS_bladegps_args;
-                boost::thread* th_bladegps = new boost::thread(boost::bind(bladegps_thread, bladerf_dev, argstring));
+                // boost::thread* th_bladegps = new boost::thread(boost::bind(bladegps_thread, bladerf_dev, argstring));
+                boost::thread(boost::bind(bladegps_thread, bladerf_dev, argstring));
 
                 std::cout << "Waiting..." << std::endl;
                 sleep(3);
