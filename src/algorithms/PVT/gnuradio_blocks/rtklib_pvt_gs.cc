@@ -2298,7 +2298,7 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
 
             // Get information for hybrid mode
             static double pseudorange_pseudo_sat_m = 0;
-            static double tx_tow_pseudo_sat_s = 0;
+            // static double tx_tow_pseudo_sat_s = 0;
             if (d_hybrid_mode && (d_ps_channel != -1) && !d_gnss_observables_map.empty())
                 {
                     auto itr = d_gnss_observables_map.find(d_ps_channel);
@@ -2307,7 +2307,7 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                             auto pseudo_sat_observable = std::move(itr->second);
                             d_gnss_observables_map.erase(itr);
                             pseudorange_pseudo_sat_m = pseudo_sat_observable.Pseudorange_m;
-                            tx_tow_pseudo_sat_s = pseudo_sat_observable.interp_TOW_ms * 1e-3;
+                            // tx_tow_pseudo_sat_s = pseudo_sat_observable.interp_TOW_ms * 1e-3;
                         }
                 }
 
@@ -2638,8 +2638,10 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                                     if (d_hybrid_mode && (d_ps_channel != -1) && (pseudorange_pseudo_sat_m != 0))
                                         {
                                             // TODO: set output rate
-                                            double clock_diff_s = (pseudorange_pseudo_sat_m / SPEED_OF_LIGHT_M_S) - Rx_clock_offset_s;
-                                            write_clock_difference(clock_diff_s, tx_tow_pseudo_sat_s);
+                                            const double dt_gnssr_aowr_s = pseudorange_pseudo_sat_m / SPEED_OF_LIGHT_M_S;
+                                            double clock_diff_s = -dt_gnssr_aowr_s + Rx_clock_offset_s;
+                                            double est_tx_tow_pseudo_sat = d_rx_time - dt_gnssr_aowr_s;
+                                            write_clock_difference(clock_diff_s, est_tx_tow_pseudo_sat);
                                         }
                                 }
                         }
