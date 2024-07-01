@@ -490,3 +490,15 @@ bool Gps_Navigation_Message::satellite_validation()
         }
     return flag_data_valid;
 }
+
+// For pseudo satellite, check just whether TOW has been gotten correctly or not.
+bool Gps_Navigation_Message::satellite_validation_ps()
+{
+    bool flag_data_valid = false;
+
+    if (d_TOW != 0.0)
+        {
+            flag_data_valid = true;
+        }
+    return flag_data_valid;
+}

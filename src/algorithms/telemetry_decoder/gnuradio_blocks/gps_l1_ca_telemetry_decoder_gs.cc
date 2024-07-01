@@ -351,14 +351,14 @@ bool gps_l1_ca_telemetry_decoder_gs::decode_subframe(double cn0, bool flag_inver
                         }
                     d_nav_msg_packet.nav_message = subframe_bits.to_string();
                 }
-            // TODO: add different decoder for AOWR tlm.
+            // FIXME: add different decoder for AOWR tlm.
             const int32_t subframe_ID = d_nav.subframe_decoder(subframe.data());  // decode the subframe
             if (subframe_ID > 0 && subframe_ID < 6)
                 {
                     if (d_hybrid_mode && this->d_channel == d_ps_channel)
                         {
                             // All subframes have the same information
-                            if (d_nav.satellite_validation() == true)
+                            if (d_nav.satellite_validation_ps() == true)
                                 {
                                     // TODO: prepare analyzer for AOWR tlm.
                                     // get ephemeris object for this SV (mandatory)
