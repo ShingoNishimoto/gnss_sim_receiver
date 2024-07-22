@@ -133,6 +133,7 @@ public:
     }
 
     bool satellite_validation();
+    bool satellite_validation_ps();
 
 private:
     uint64_t read_navigation_unsigned(const std::bitset<GPS_SUBFRAME_BITS>& bits, const std::vector<std::pair<int32_t, int32_t>>& parameter) const;

@@ -296,14 +296,21 @@ private:
         uint32_t length;
         const uint8_t size_one_line;
     } sharing_info_mmap;
-    sharing_info_mmap d_mmap_rx_clock_bias  = { 0, NULL, 0,
-                                                24500,  // (= 49 * 500)
-                                                49  // Bytes
-                                              };
-    sharing_info_mmap d_mmap_clock_diff = { 0, NULL, 0,
-                                            3400,  // (= 34 * 100)
-                                            34  // Bytes
-                                          };
+    sharing_info_mmap d_mmap_rx_clock_bias = {
+        0,
+        NULL,
+        0,
+        24500,  // (= 49 * 500)
+        49  // Bytes
+    };
+    // FIXME: make it thread safe using pthread
+    sharing_info_mmap d_mmap_clock_diff = {
+        0,
+        NULL,
+        0,
+        340,  // (= 34 * 10)
+        34  // Bytes
+    };
 };
 
 
