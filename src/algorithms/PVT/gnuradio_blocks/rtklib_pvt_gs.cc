@@ -2194,7 +2194,7 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                             if (tmp_eph_iter_gps != d_internal_pvt_solver->gps_ephemeris_map.cend())
                                 {
                                     const uint32_t prn_aux = tmp_eph_iter_gps->second.PRN;
-                                    if ((prn_aux == in[i][epoch].PRN) && (std::string(in[i][epoch].Signal, 2) == std::string("1C")) && (d_use_unhealthy_sats || (tmp_eph_iter_gps->second.SV_health == 0) || d_ps_channel == i))
+                                    if ((prn_aux == in[i][epoch].PRN) && (std::string(in[i][epoch].Signal, 2) == std::string("1C")) && (d_use_unhealthy_sats || (tmp_eph_iter_gps->second.SV_health == 0) || d_ps_channel == static_cast<int32_t>(i)))
                                         {
                                             store_valid_observable = true;
                                         }
@@ -2297,19 +2297,26 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                 }
 
             // Get information for hybrid mode
-            static double pseudorange_pseudo_sat_m = 0;
+            static double dt_gnssr_aowr_s = 0;
+            static bool flag_ps_observed = false;
             // static double tx_tow_pseudo_sat_s = 0;
             if (d_hybrid_mode && (d_ps_channel != -1) && !d_gnss_observables_map.empty())
                 {
                     auto itr = d_gnss_observables_map.find(d_ps_channel);
-                    if (itr != d_gnss_observables_map.end())
+                    // NOTE: Don't keep observing it. The pseudo range jump at the end of observation.
+                    // FIXME: think better way such as averaging multiple ranges, etc.
+                    // if (itr != d_gnss_observables_map.end())
+                    if (itr != d_gnss_observables_map.end() && !flag_ps_observed)
                         {
                             auto pseudo_sat_observable = std::move(itr->second);
                             d_gnss_observables_map.erase(itr);
-                            pseudorange_pseudo_sat_m = pseudo_sat_observable.Pseudorange_m;
+                            dt_gnssr_aowr_s = pseudo_sat_observable.Pseudorange_m / SPEED_OF_LIGHT_M_S;
+                            flag_ps_observed = true;
                             // tx_tow_pseudo_sat_s = pseudo_sat_observable.interp_TOW_ms * 1e-3;
                         }
                 }
+            // For debug
+            if (flag_ps_observed) LOG(INFO) << "dt_GNSSR-AOWR [s]: " << std::fixed << std::setprecision(10) << dt_gnssr_aowr_s;
 
             // ############ 2. APPLY HAS CORRECTIONS IF AVAILABLE ####
             if (d_use_has_corrections && !d_gnss_observables_map.empty())
@@ -2393,6 +2400,22 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                                             this->message_port_pub(pmt::mp("pvt_to_observables"), pmt::make_any(Rx_clock_offset_s));
                                             d_timestamp_rx_clock_offset_correction_msg_ms = d_local_counter_ms;
                                             LOG(INFO) << "PVT: Sent clock offset correction to observables: " << Rx_clock_offset_s << "[s]";
+
+                                            if (d_hybrid_mode && (d_ps_channel != -1) && flag_ps_observed)
+                                                {
+                                                    const int32_t rx_clock_offset_ms = static_cast<int32_t>(std::round(Rx_clock_offset_s * 1000.0));
+                                                    current_RX_time_ms = static_cast<uint32_t>(d_gnss_observables_map.begin()->second.RX_time * 1000.0);
+                                                    double corrected_rx_time_ms = static_cast<double>(current_RX_time_ms) - rx_clock_offset_ms;
+                                                    // FIXME: get from hybrid_observables.
+                                                    const uint32_t rx_time_step_ms = 20;
+                                                    if (static_cast<int32_t>(corrected_rx_time_ms) % rx_time_step_ms)
+                                                        {
+                                                            corrected_rx_time_ms += rx_time_step_ms - static_cast<int32_t>(corrected_rx_time_ms) % rx_time_step_ms;
+                                                        }
+                                                    assert(corrected_rx_time_ms >= 0);
+                                                    const double corrected_time_s = (corrected_rx_time_ms - static_cast<double>(current_RX_time_ms)) / 1000.0;
+                                                    dt_gnssr_aowr_s += corrected_time_s;
+                                                }
                                         }
                                 }
                             else
@@ -2440,7 +2463,8 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                                         }
                                 }
                         }
-                    else
+                    // else
+                    else if (!d_hybrid_mode)
                         {
                             // sanity check: If the PVT solver is getting 100 consecutive errors, send a reset command to observables block
                             d_pvt_errors_counter++;
@@ -2635,12 +2659,12 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                                             }
                                             write_rx_clock_bias(Rx_clock_offset_s, tag_tow_s_at_ch0, this->d_gnss_observables_map.begin()->second.PRN);
                                         }
-                                    if (d_hybrid_mode && (d_ps_channel != -1) && (pseudorange_pseudo_sat_m != 0))
+                                    if (d_hybrid_mode && (d_ps_channel != -1) && flag_ps_observed)
                                         {
                                             // TODO: set output rate
-                                            const double dt_gnssr_aowr_s = pseudorange_pseudo_sat_m / SPEED_OF_LIGHT_M_S;
                                             double clock_diff_s = -dt_gnssr_aowr_s + Rx_clock_offset_s;
                                             double est_tx_tow_pseudo_sat = d_rx_time - dt_gnssr_aowr_s;
+
                                             write_clock_difference(clock_diff_s, est_tx_tow_pseudo_sat);
                                         }
                                 }
