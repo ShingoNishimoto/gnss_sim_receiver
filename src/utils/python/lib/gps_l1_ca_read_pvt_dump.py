@@ -26,6 +26,7 @@
 
 import math
 import struct
+
 import numpy as np
 
 
@@ -217,7 +218,7 @@ def gps_l1_ca_read_pvt_dump(filename):
     navSolutions = {
         'TOW': TOW,
         'WEEK': WEEK,
-        'TransmitTime': PVT_GPS_time,
+        'RxTime': PVT_GPS_time,
         'dt': Clock_Offset,
         'X': ECEF_X_POS,
         'Y': ECEF_Y_POS,

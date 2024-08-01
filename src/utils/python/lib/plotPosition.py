@@ -112,9 +112,9 @@ def plot_position(navSolutions, path):
 
     # Plot ->
     time = []
-    for i in range(len(navSolutions['TransmitTime'])):
-        time.append(round(navSolutions['TransmitTime'][i] -
-                          min(navSolutions['TransmitTime']), 3))
+    for i in range(len(navSolutions['RxTime'])):
+        time.append(round(navSolutions['RxTime'][i] -
+                          min(navSolutions['RxTime']), 3))
 
     plt.figure(figsize=(1920 / 120, 1080 / 120))
     plt.clf()
@@ -138,7 +138,7 @@ def plot_position(navSolutions, path):
     scatter.set_cmap(cmap)
     scatter.set_norm(norm)
     colors = plt.colorbar(scatter)
-    colors.set_label('TransmitTime [s]')
+    colors.set_label('RxTime [s]')
 
     # X, Y, Z
     ax = plt.subplot(1, 2, 2, projection='3d')
@@ -164,9 +164,9 @@ def plot_oneVStime(navSolutions, name, path):
         os.mkdir(fig_path)
 
     time = []
-    for i in range(len(navSolutions['TransmitTime'])):
-        time.append(round(navSolutions['TransmitTime'][i] -
-                          min(navSolutions['TransmitTime']), 3))
+    for i in range(len(navSolutions['RxTime'])):
+        time.append(round(navSolutions['RxTime'][i] -
+                          min(navSolutions['RxTime']), 3))
 
     plt.clf()
     plt.scatter(time, navSolutions[name], marker='.')

@@ -554,9 +554,12 @@ rtklib_pvt_gs::rtklib_pvt_gs(uint32_t nchannels,
     else
         {
             // only one solver, customized by the user options
-            d_internal_pvt_solver = std::make_shared<Rtklib_Solver>(rtk, conf_, dump_ls_pvt_filename, d_type_of_rx, d_dump, d_dump_mat);
+            d_internal_pvt_solver = std::make_shared<Rtklib_Solver>(rtk, conf_, dump_ls_pvt_filename, d_type_of_rx, false, false);
             d_internal_pvt_solver->set_pre_2009_file(conf_.pre_2009_file);
-            d_user_pvt_solver = d_internal_pvt_solver;
+
+            // Instance unique solver to follow the dump option
+            d_user_pvt_solver = std::make_shared<Rtklib_Solver>(rtk, conf_, dump_ls_pvt_filename, d_type_of_rx, d_dump, d_dump_mat);
+            d_user_pvt_solver->set_pre_2009_file(conf_.pre_2009_file);
         }
 
     // set the RTKLIB trace (debug) level
@@ -1295,10 +1298,11 @@ void rtklib_pvt_gs::msg_handler_telemetry(const pmt::pmt_t& msg)
                                 }
                         }
                     d_internal_pvt_solver->gps_ephemeris_map[gps_eph->PRN] = *gps_eph;
-                    if (d_enable_rx_clock_correction == true)
-                        {
-                            d_user_pvt_solver->gps_ephemeris_map[gps_eph->PRN] = *gps_eph;
-                        }
+                    // if (d_enable_rx_clock_correction == true)
+                    //     {
+                    //         d_user_pvt_solver->gps_ephemeris_map[gps_eph->PRN] = *gps_eph;
+                    //     }
+                    d_user_pvt_solver->gps_ephemeris_map[gps_eph->PRN] = *gps_eph;
                     if (gps_eph->SV_health != 0)
                         {
                             std::cout << TEXT_RED << "Satellite " << Gnss_Satellite(std::string("GPS"), gps_eph->PRN)
@@ -1318,10 +1322,11 @@ void rtklib_pvt_gs::msg_handler_telemetry(const pmt::pmt_t& msg)
                     // ### GPS IONO ###
                     const auto gps_iono = wht::any_cast<std::shared_ptr<Gps_Iono>>(pmt::any_ref(msg));
                     d_internal_pvt_solver->gps_iono = *gps_iono;
-                    if (d_enable_rx_clock_correction == true)
-                        {
-                            d_user_pvt_solver->gps_iono = *gps_iono;
-                        }
+                    // if (d_enable_rx_clock_correction == true)
+                    //     {
+                    //         d_user_pvt_solver->gps_iono = *gps_iono;
+                    //     }
+                    d_user_pvt_solver->gps_iono = *gps_iono;
                     DLOG(INFO) << "New IONO record has arrived";
                 }
             else if (msg_type_hash_code == d_gps_utc_model_sptr_type_hash_code)
@@ -1329,10 +1334,11 @@ void rtklib_pvt_gs::msg_handler_telemetry(const pmt::pmt_t& msg)
                     // ### GPS UTC MODEL ###
                     const auto gps_utc_model = wht::any_cast<std::shared_ptr<Gps_Utc_Model>>(pmt::any_ref(msg));
                     d_internal_pvt_solver->gps_utc_model = *gps_utc_model;
-                    if (d_enable_rx_clock_correction == true)
-                        {
-                            d_user_pvt_solver->gps_utc_model = *gps_utc_model;
-                        }
+                    // if (d_enable_rx_clock_correction == true)
+                    //     {
+                    //         d_user_pvt_solver->gps_utc_model = *gps_utc_model;
+                    //     }
+                    d_user_pvt_solver->gps_utc_model = *gps_utc_model;
                     DLOG(INFO) << "New UTC record has arrived";
                 }
             else if (msg_type_hash_code == d_gps_cnav_ephemeris_sptr_type_hash_code)
@@ -1363,10 +1369,11 @@ void rtklib_pvt_gs::msg_handler_telemetry(const pmt::pmt_t& msg)
                                 }
                         }
                     d_internal_pvt_solver->gps_cnav_ephemeris_map[gps_cnav_ephemeris->PRN] = *gps_cnav_ephemeris;
-                    if (d_enable_rx_clock_correction == true)
-                        {
-                            d_user_pvt_solver->gps_cnav_ephemeris_map[gps_cnav_ephemeris->PRN] = *gps_cnav_ephemeris;
-                        }
+                    // if (d_enable_rx_clock_correction == true)
+                    //     {
+                    //         d_user_pvt_solver->gps_cnav_ephemeris_map[gps_cnav_ephemeris->PRN] = *gps_cnav_ephemeris;
+                    //     }
+                    d_user_pvt_solver->gps_cnav_ephemeris_map[gps_cnav_ephemeris->PRN] = *gps_cnav_ephemeris;
                     if (gps_cnav_ephemeris->signal_health != 0)
                         {
                             std::cout << "Satellite " << Gnss_Satellite(std::string("GPS"), gps_cnav_ephemeris->PRN)
@@ -1387,10 +1394,11 @@ void rtklib_pvt_gs::msg_handler_telemetry(const pmt::pmt_t& msg)
                     // ### GPS CNAV IONO ###
                     const auto gps_cnav_iono = wht::any_cast<std::shared_ptr<Gps_CNAV_Iono>>(pmt::any_ref(msg));
                     d_internal_pvt_solver->gps_cnav_iono = *gps_cnav_iono;
-                    if (d_enable_rx_clock_correction == true)
-                        {
-                            d_user_pvt_solver->gps_cnav_iono = *gps_cnav_iono;
-                        }
+                    // if (d_enable_rx_clock_correction == true)
+                    //     {
+                    //         d_user_pvt_solver->gps_cnav_iono = *gps_cnav_iono;
+                    //     }
+                    d_user_pvt_solver->gps_cnav_iono = *gps_cnav_iono;
                     DLOG(INFO) << "New CNAV IONO record has arrived";
                 }
             else if (msg_type_hash_code == d_gps_cnav_utc_model_sptr_type_hash_code)
@@ -1409,10 +1417,11 @@ void rtklib_pvt_gs::msg_handler_telemetry(const pmt::pmt_t& msg)
                     // ### GPS ALMANAC ###
                     const auto gps_almanac = wht::any_cast<std::shared_ptr<Gps_Almanac>>(pmt::any_ref(msg));
                     d_internal_pvt_solver->gps_almanac_map[gps_almanac->PRN] = *gps_almanac;
-                    if (d_enable_rx_clock_correction == true)
-                        {
-                            d_user_pvt_solver->gps_almanac_map[gps_almanac->PRN] = *gps_almanac;
-                        }
+                    // if (d_enable_rx_clock_correction == true)
+                    //     {
+                    //         d_user_pvt_solver->gps_almanac_map[gps_almanac->PRN] = *gps_almanac;
+                    //     }
+                    d_user_pvt_solver->gps_almanac_map[gps_almanac->PRN] = *gps_almanac;
                     DLOG(INFO) << "New GPS almanac record has arrived";
                 }
 
@@ -1455,10 +1464,11 @@ void rtklib_pvt_gs::msg_handler_telemetry(const pmt::pmt_t& msg)
                                 }
                         }
                     d_internal_pvt_solver->galileo_ephemeris_map[galileo_eph->PRN] = *galileo_eph;
-                    if (d_enable_rx_clock_correction == true)
-                        {
-                            d_user_pvt_solver->galileo_ephemeris_map[galileo_eph->PRN] = *galileo_eph;
-                        }
+                    // if (d_enable_rx_clock_correction == true)
+                    //     {
+                    //         d_user_pvt_solver->galileo_ephemeris_map[galileo_eph->PRN] = *galileo_eph;
+                    //     }
+                    d_user_pvt_solver->galileo_ephemeris_map[galileo_eph->PRN] = *galileo_eph;
                     if (((galileo_eph->E1B_HS != 0) || (galileo_eph->E1B_DVS == true)) ||
                         ((galileo_eph->E5a_HS != 0) || (galileo_eph->E5a_DVS == true)) ||
                         ((galileo_eph->E5b_HS != 0) || (galileo_eph->E5b_DVS == true)))
@@ -1480,10 +1490,11 @@ void rtklib_pvt_gs::msg_handler_telemetry(const pmt::pmt_t& msg)
                     // ### Galileo IONO ###
                     const auto galileo_iono = wht::any_cast<std::shared_ptr<Galileo_Iono>>(pmt::any_ref(msg));
                     d_internal_pvt_solver->galileo_iono = *galileo_iono;
-                    if (d_enable_rx_clock_correction == true)
-                        {
-                            d_user_pvt_solver->galileo_iono = *galileo_iono;
-                        }
+                    // if (d_enable_rx_clock_correction == true)
+                    //     {
+                    //         d_user_pvt_solver->galileo_iono = *galileo_iono;
+                    //     }
+                    d_user_pvt_solver->galileo_iono = *galileo_iono;
                     DLOG(INFO) << "New IONO record has arrived";
                 }
             else if (msg_type_hash_code == d_galileo_utc_model_sptr_type_hash_code)
@@ -1491,10 +1502,11 @@ void rtklib_pvt_gs::msg_handler_telemetry(const pmt::pmt_t& msg)
                     // ### Galileo UTC MODEL ###
                     const auto galileo_utc_model = wht::any_cast<std::shared_ptr<Galileo_Utc_Model>>(pmt::any_ref(msg));
                     d_internal_pvt_solver->galileo_utc_model = *galileo_utc_model;
-                    if (d_enable_rx_clock_correction == true)
-                        {
-                            d_user_pvt_solver->galileo_utc_model = *galileo_utc_model;
-                        }
+                    // if (d_enable_rx_clock_correction == true)
+                    //     {
+                    //         d_user_pvt_solver->galileo_utc_model = *galileo_utc_model;
+                    //     }
+                    d_user_pvt_solver->galileo_utc_model = *galileo_utc_model;
                     DLOG(INFO) << "New UTC record has arrived";
                 }
             else if (msg_type_hash_code == d_galileo_almanac_helper_sptr_type_hash_code)
@@ -1508,26 +1520,29 @@ void rtklib_pvt_gs::msg_handler_telemetry(const pmt::pmt_t& msg)
                     if (sv1.PRN != 0)
                         {
                             d_internal_pvt_solver->galileo_almanac_map[sv1.PRN] = sv1;
-                            if (d_enable_rx_clock_correction == true)
-                                {
-                                    d_user_pvt_solver->galileo_almanac_map[sv1.PRN] = sv1;
-                                }
+                            // if (d_enable_rx_clock_correction == true)
+                            //     {
+                            //         d_user_pvt_solver->galileo_almanac_map[sv1.PRN] = sv1;
+                            //     }
+                            d_user_pvt_solver->galileo_almanac_map[sv1.PRN] = sv1;
                         }
                     if (sv2.PRN != 0)
                         {
                             d_internal_pvt_solver->galileo_almanac_map[sv2.PRN] = sv2;
-                            if (d_enable_rx_clock_correction == true)
-                                {
-                                    d_user_pvt_solver->galileo_almanac_map[sv2.PRN] = sv2;
-                                }
+                            // if (d_enable_rx_clock_correction == true)
+                            //     {
+                            //         d_user_pvt_solver->galileo_almanac_map[sv2.PRN] = sv2;
+                            //     }
+                            d_user_pvt_solver->galileo_almanac_map[sv2.PRN] = sv2;
                         }
                     if (sv3.PRN != 0)
                         {
                             d_internal_pvt_solver->galileo_almanac_map[sv3.PRN] = sv3;
-                            if (d_enable_rx_clock_correction == true)
-                                {
-                                    d_user_pvt_solver->galileo_almanac_map[sv3.PRN] = sv3;
-                                }
+                            // if (d_enable_rx_clock_correction == true)
+                            //     {
+                            //         d_user_pvt_solver->galileo_almanac_map[sv3.PRN] = sv3;
+                            //     }
+                            d_user_pvt_solver->galileo_almanac_map[sv3.PRN] = sv3;
                         }
                     DLOG(INFO) << "New Galileo Almanac data have arrived";
                 }
@@ -1537,10 +1552,11 @@ void rtklib_pvt_gs::msg_handler_telemetry(const pmt::pmt_t& msg)
                     const auto galileo_alm = wht::any_cast<std::shared_ptr<Galileo_Almanac>>(pmt::any_ref(msg));
                     // update/insert new almanac record to the global almanac map
                     d_internal_pvt_solver->galileo_almanac_map[galileo_alm->PRN] = *galileo_alm;
-                    if (d_enable_rx_clock_correction == true)
-                        {
-                            d_user_pvt_solver->galileo_almanac_map[galileo_alm->PRN] = *galileo_alm;
-                        }
+                    // if (d_enable_rx_clock_correction == true)
+                    //     {
+                    //         d_user_pvt_solver->galileo_almanac_map[galileo_alm->PRN] = *galileo_alm;
+                    //     }
+                    d_user_pvt_solver->galileo_almanac_map[galileo_alm->PRN] = *galileo_alm;
                 }
 
             // **************** GLONASS GNAV Telemetry *************************
@@ -1578,20 +1594,22 @@ void rtklib_pvt_gs::msg_handler_telemetry(const pmt::pmt_t& msg)
                                 }
                         }
                     d_internal_pvt_solver->glonass_gnav_ephemeris_map[glonass_gnav_eph->PRN] = *glonass_gnav_eph;
-                    if (d_enable_rx_clock_correction == true)
-                        {
-                            d_user_pvt_solver->glonass_gnav_ephemeris_map[glonass_gnav_eph->PRN] = *glonass_gnav_eph;
-                        }
+                    // if (d_enable_rx_clock_correction == true)
+                    //     {
+                    //         d_user_pvt_solver->glonass_gnav_ephemeris_map[glonass_gnav_eph->PRN] = *glonass_gnav_eph;
+                    //     }
+                    d_user_pvt_solver->glonass_gnav_ephemeris_map[glonass_gnav_eph->PRN] = *glonass_gnav_eph;
                 }
             else if (msg_type_hash_code == d_glonass_gnav_utc_model_sptr_type_hash_code)
                 {
                     // ### GLONASS GNAV UTC MODEL ###
                     const auto glonass_gnav_utc_model = wht::any_cast<std::shared_ptr<Glonass_Gnav_Utc_Model>>(pmt::any_ref(msg));
                     d_internal_pvt_solver->glonass_gnav_utc_model = *glonass_gnav_utc_model;
-                    if (d_enable_rx_clock_correction == true)
-                        {
-                            d_user_pvt_solver->glonass_gnav_utc_model = *glonass_gnav_utc_model;
-                        }
+                    // if (d_enable_rx_clock_correction == true)
+                    //     {
+                    //         d_user_pvt_solver->glonass_gnav_utc_model = *glonass_gnav_utc_model;
+                    //     }
+                    d_user_pvt_solver->glonass_gnav_utc_model = *glonass_gnav_utc_model;
                     DLOG(INFO) << "New GLONASS GNAV UTC record has arrived";
                 }
             else if (msg_type_hash_code == d_glonass_gnav_almanac_sptr_type_hash_code)
@@ -1599,10 +1617,11 @@ void rtklib_pvt_gs::msg_handler_telemetry(const pmt::pmt_t& msg)
                     // ### GLONASS GNAV Almanac ###
                     const auto glonass_gnav_almanac = wht::any_cast<std::shared_ptr<Glonass_Gnav_Almanac>>(pmt::any_ref(msg));
                     d_internal_pvt_solver->glonass_gnav_almanac = *glonass_gnav_almanac;
-                    if (d_enable_rx_clock_correction == true)
-                        {
-                            d_user_pvt_solver->glonass_gnav_almanac = *glonass_gnav_almanac;
-                        }
+                    // if (d_enable_rx_clock_correction == true)
+                    //     {
+                    //         d_user_pvt_solver->glonass_gnav_almanac = *glonass_gnav_almanac;
+                    //     }
+                    d_user_pvt_solver->glonass_gnav_almanac = *glonass_gnav_almanac;
                     DLOG(INFO) << "New GLONASS GNAV Almanac has arrived"
                                << ", GLONASS GNAV Slot Number =" << glonass_gnav_almanac->d_n_A;
                 }
@@ -1641,10 +1660,11 @@ void rtklib_pvt_gs::msg_handler_telemetry(const pmt::pmt_t& msg)
                                 }
                         }
                     d_internal_pvt_solver->beidou_dnav_ephemeris_map[bds_dnav_eph->PRN] = *bds_dnav_eph;
-                    if (d_enable_rx_clock_correction == true)
-                        {
-                            d_user_pvt_solver->beidou_dnav_ephemeris_map[bds_dnav_eph->PRN] = *bds_dnav_eph;
-                        }
+                    // if (d_enable_rx_clock_correction == true)
+                    //     {
+                    //         d_user_pvt_solver->beidou_dnav_ephemeris_map[bds_dnav_eph->PRN] = *bds_dnav_eph;
+                    //     }
+                    d_user_pvt_solver->beidou_dnav_ephemeris_map[bds_dnav_eph->PRN] = *bds_dnav_eph;
                     if (bds_dnav_eph->SV_health != 0)
                         {
                             std::cout << TEXT_RED << "Satellite " << Gnss_Satellite(std::string("Beidou"), bds_dnav_eph->PRN)
@@ -1664,10 +1684,11 @@ void rtklib_pvt_gs::msg_handler_telemetry(const pmt::pmt_t& msg)
                     // ### BeiDou IONO ###
                     const auto bds_dnav_iono = wht::any_cast<std::shared_ptr<Beidou_Dnav_Iono>>(pmt::any_ref(msg));
                     d_internal_pvt_solver->beidou_dnav_iono = *bds_dnav_iono;
-                    if (d_enable_rx_clock_correction == true)
-                        {
-                            d_user_pvt_solver->beidou_dnav_iono = *bds_dnav_iono;
-                        }
+                    // if (d_enable_rx_clock_correction == true)
+                    //     {
+                    //         d_user_pvt_solver->beidou_dnav_iono = *bds_dnav_iono;
+                    //     }
+                    d_user_pvt_solver->beidou_dnav_iono = *bds_dnav_iono;
                     DLOG(INFO) << "New BeiDou DNAV IONO record has arrived";
                 }
             else if (msg_type_hash_code == d_beidou_dnav_utc_model_sptr_type_hash_code)
@@ -1675,10 +1696,11 @@ void rtklib_pvt_gs::msg_handler_telemetry(const pmt::pmt_t& msg)
                     // ### BeiDou UTC MODEL ###
                     const auto bds_dnav_utc_model = wht::any_cast<std::shared_ptr<Beidou_Dnav_Utc_Model>>(pmt::any_ref(msg));
                     d_internal_pvt_solver->beidou_dnav_utc_model = *bds_dnav_utc_model;
-                    if (d_enable_rx_clock_correction == true)
-                        {
-                            d_user_pvt_solver->beidou_dnav_utc_model = *bds_dnav_utc_model;
-                        }
+                    // if (d_enable_rx_clock_correction == true)
+                    //     {
+                    //         d_user_pvt_solver->beidou_dnav_utc_model = *bds_dnav_utc_model;
+                    //     }
+                    d_user_pvt_solver->beidou_dnav_utc_model = *bds_dnav_utc_model;
                     DLOG(INFO) << "New BeiDou DNAV UTC record has arrived";
                 }
             else if (msg_type_hash_code == d_beidou_dnav_almanac_sptr_type_hash_code)
@@ -1686,10 +1708,11 @@ void rtklib_pvt_gs::msg_handler_telemetry(const pmt::pmt_t& msg)
                     // ### BeiDou ALMANAC ###
                     const auto bds_dnav_almanac = wht::any_cast<std::shared_ptr<Beidou_Dnav_Almanac>>(pmt::any_ref(msg));
                     d_internal_pvt_solver->beidou_dnav_almanac_map[bds_dnav_almanac->PRN] = *bds_dnav_almanac;
-                    if (d_enable_rx_clock_correction == true)
-                        {
-                            d_user_pvt_solver->beidou_dnav_almanac_map[bds_dnav_almanac->PRN] = *bds_dnav_almanac;
-                        }
+                    // if (d_enable_rx_clock_correction == true)
+                    //     {
+                    //         d_user_pvt_solver->beidou_dnav_almanac_map[bds_dnav_almanac->PRN] = *bds_dnav_almanac;
+                    //     }
+                    d_user_pvt_solver->beidou_dnav_almanac_map[bds_dnav_almanac->PRN] = *bds_dnav_almanac;
                     DLOG(INFO) << "New BeiDou DNAV almanac record has arrived";
                 }
             else
@@ -1715,10 +1738,11 @@ void rtklib_pvt_gs::msg_handler_has_data(const pmt::pmt_t& msg)
                     if (d_use_has_corrections && (has_data->has_status == 1))  // operational mode
                         {
                             d_internal_pvt_solver->store_has_data(*has_data);
-                            if (d_enable_rx_clock_correction == true)
-                                {
-                                    d_user_pvt_solver->store_has_data(*has_data);
-                                }
+                            // if (d_enable_rx_clock_correction == true)
+                            //     {
+                            //         d_user_pvt_solver->store_has_data(*has_data);
+                            //     }
+                            d_user_pvt_solver->store_has_data(*has_data);
                         }
                     if (d_has_simple_printer)
                         {
@@ -1781,15 +1805,21 @@ void rtklib_pvt_gs::clear_ephemeris()
     d_internal_pvt_solver->galileo_almanac_map.clear();
     d_internal_pvt_solver->beidou_dnav_ephemeris_map.clear();
     d_internal_pvt_solver->beidou_dnav_almanac_map.clear();
-    if (d_enable_rx_clock_correction == true)
-        {
-            d_user_pvt_solver->gps_ephemeris_map.clear();
-            d_user_pvt_solver->gps_almanac_map.clear();
-            d_user_pvt_solver->galileo_ephemeris_map.clear();
-            d_user_pvt_solver->galileo_almanac_map.clear();
-            d_user_pvt_solver->beidou_dnav_ephemeris_map.clear();
-            d_user_pvt_solver->beidou_dnav_almanac_map.clear();
-        }
+    // if (d_enable_rx_clock_correction == true)
+    //     {
+    //         d_user_pvt_solver->gps_ephemeris_map.clear();
+    //         d_user_pvt_solver->gps_almanac_map.clear();
+    //         d_user_pvt_solver->galileo_ephemeris_map.clear();
+    //         d_user_pvt_solver->galileo_almanac_map.clear();
+    //         d_user_pvt_solver->beidou_dnav_ephemeris_map.clear();
+    //         d_user_pvt_solver->beidou_dnav_almanac_map.clear();
+    //     }
+    d_user_pvt_solver->gps_ephemeris_map.clear();
+    d_user_pvt_solver->gps_almanac_map.clear();
+    d_user_pvt_solver->galileo_ephemeris_map.clear();
+    d_user_pvt_solver->galileo_almanac_map.clear();
+    d_user_pvt_solver->beidou_dnav_ephemeris_map.clear();
+    d_user_pvt_solver->beidou_dnav_almanac_map.clear();
 }
 
 
@@ -2030,10 +2060,11 @@ void rtklib_pvt_gs::initialize_and_apply_carrier_phase_offset()
 void rtklib_pvt_gs::update_HAS_corrections()
 {
     this->d_internal_pvt_solver->update_has_corrections(this->d_gnss_observables_map);
-    if (d_enable_rx_clock_correction == true)
-        {
-            this->d_user_pvt_solver->update_has_corrections(this->d_gnss_observables_map);
-        }
+    // if (d_enable_rx_clock_correction == true)
+    //     {
+    //         this->d_user_pvt_solver->update_has_corrections(this->d_gnss_observables_map);
+    //     }
+    this->d_user_pvt_solver->update_has_corrections(this->d_gnss_observables_map);
 }
 
 void rtklib_pvt_gs::write_rx_clock_bias(const double rx_clock_offset_s, const double tag_tow_s, const uint32_t PRN)

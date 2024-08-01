@@ -56,9 +56,9 @@ def plotNavigation(navSolutions, settings, path, coord='UTM', plot_skyplot=0):
         exit()
 
     if navSolutions:
-        if (np.isnan(settings['true_position'][position_label[0]]) or
-                np.isnan(settings['true_position'][position_label[1]]) or
-                np.isnan(settings['true_position'][position_label[2]])):
+        if (np.isnan(settings['true_position'][position_label[0]].any()) or
+                np.isnan(settings['true_position'][position_label[1]].any()) or
+                np.isnan(settings['true_position'][position_label[2]].any())):
 
             # Compute mean values
             ref_coord = {
@@ -106,12 +106,13 @@ def plotNavigation(navSolutions, settings, path, coord='UTM', plot_skyplot=0):
         ax3 = plt.subplot(4, 2, (6, 8), projection='3d')
 
         #  (ax1) Coordinate differences in the system from reference point
-        ax1.plot(np.vstack([np.array(navSolutions[position_label[0]]) - ref_coord[position_label[0]],
+        ax1.plot(np.array(navSolutions["RxTime"]), np.vstack([np.array(navSolutions[position_label[0]]) - ref_coord[position_label[0]],
                     np.array(navSolutions[position_label[1]]) - ref_coord[position_label[1]],
                     np.array(navSolutions[position_label[2]]) - ref_coord[position_label[2]]]).T)
         ax1.set_title('Coordinates variations in ' + coord + ' system', fontweight='bold')
         ax1.legend([position_label[0], position_label[1], position_label[2]])
-        ax1.set_xlabel(f"Measurement period: {settings['navSolPeriod']} ms")
+        ax1.set_xlabel(f"Rx Time (s)")
+        # ax1.set_xlabel(f"Rx Time: {settings['navSolPeriod']} s")
         ax1.set_ylabel('Variations (m)')
         ax1.grid(True)
         ax1.axis('tight')
