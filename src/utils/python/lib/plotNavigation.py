@@ -38,7 +38,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plotNavigation(navSolutions, settings, path, coord='UTM', plot_skyplot=0):
+def plotNavigation(navSolutions, settings, path, coord='UTM', plot_skyplot=0, dynamic=False):
 
     # ---------- CHANGE HERE:
     fig_path = path + 'figure/'
@@ -56,9 +56,17 @@ def plotNavigation(navSolutions, settings, path, coord='UTM', plot_skyplot=0):
         exit()
 
     if navSolutions:
-        if (np.isnan(settings['true_position'][position_label[0]]) or
-                np.isnan(settings['true_position'][position_label[1]]) or
-                np.isnan(settings['true_position'][position_label[2]])):
+        if dynamic:
+            true_pos_x = settings['true_position'][position_label[0]].any()
+            true_pos_y = settings['true_position'][position_label[1]].any()
+            true_pos_z = settings['true_position'][position_label[2]].any()
+        else:
+            true_pos_x = settings['true_position'][position_label[0]]
+            true_pos_y = settings['true_position'][position_label[1]]
+            true_pos_z = settings['true_position'][position_label[2]]
+        if (np.isnan(true_pos_x) or
+                np.isnan(true_pos_y) or
+                np.isnan(true_pos_z)):
 
             # Compute mean values
             ref_coord = {
@@ -82,19 +90,20 @@ def plotNavigation(navSolutions, settings, path, coord='UTM', plot_skyplot=0):
                 position_label[2]: settings['true_position'][position_label[2]]
             }
 
-            mean_position = {
-                position_label[0]: np.nanmean(navSolutions[position_label[0]]),
-                position_label[1]: np.nanmean(navSolutions[position_label[1]]),
-                position_label[2]: np.nanmean(navSolutions[position_label[2]])
+            error_positions = {
+                position_label[0]: navSolutions[position_label[0]] - ref_coord[position_label[0]],
+                position_label[1]: navSolutions[position_label[1]] - ref_coord[position_label[1]],
+                position_label[2]: navSolutions[position_label[2]] - ref_coord[position_label[2]]
             }
 
-            error_meters = np.sqrt(
-                (mean_position[position_label[0]] - ref_coord[position_label[0]]) ** 2 +
-                (mean_position[position_label[1]] - ref_coord[position_label[1]]) ** 2 +
-                (mean_position[position_label[2]] - ref_coord[position_label[2]]) ** 2)
+            rmse_3d = np.sqrt(
+                np.nanmean(error_positions[position_label[0]] ** 2) +
+                np.nanmean(error_positions[position_label[1]] ** 2) +
+                np.nanmean(error_positions[position_label[1]] ** 2)
+            )
 
             ref_point_lg_text = (f"Reference Position, Mean 3D error = "
-                                 f"{error_meters} [m]")
+                                 f"{rmse_3d} [m]")
 
         #Create plot and subplots
         plt.figure(figsize=(1920 / 120, 1080 / 120))
@@ -106,13 +115,14 @@ def plotNavigation(navSolutions, settings, path, coord='UTM', plot_skyplot=0):
         ax3 = plt.subplot(4, 2, (6, 8), projection='3d')
 
         #  (ax1) Coordinate differences in the system from reference point
-        ax1.plot(np.vstack([np.array(navSolutions[position_label[0]]) - ref_coord[position_label[0]],
+        ax1.plot(np.array(navSolutions["RxTime"]), np.vstack([np.array(navSolutions[position_label[0]]) - ref_coord[position_label[0]],
                     np.array(navSolutions[position_label[1]]) - ref_coord[position_label[1]],
                     np.array(navSolutions[position_label[2]]) - ref_coord[position_label[2]]]).T)
         ax1.set_title('Coordinates variations in ' + coord + ' system', fontweight='bold')
         ax1.legend([position_label[0], position_label[1], position_label[2]])
-        ax1.set_xlabel(f"Measurement period: {settings['navSolPeriod']} ms")
-        ax1.set_ylabel('Variations (m)')
+        ax1.set_xlabel(f"Rx Time (s)")
+        # ax1.set_xlabel(f"Rx Time: {settings['navSolPeriod']} s")
+        ax1.set_ylabel('Errors (m)')
         ax1.grid(True)
         ax1.axis('tight')
 
