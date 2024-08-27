@@ -98,6 +98,11 @@ if(NOT has_span)
     )
 endif()
 
+# Find libraries
+# find_package(Eigen3 3.4 REQUIRED)
+# TODO: date library
+
+
 target_link_libraries(algorithms_libs
     PUBLIC
         Armadillo::armadillo
