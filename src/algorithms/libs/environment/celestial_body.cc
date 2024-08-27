@@ -1,5 +1,5 @@
 /*!
- * \file celestial_body.h
+ * \file celestial_body.cc
  * \brief Class to manage the celestial information
  * \author Shingo Nishimoto
  *
@@ -16,21 +16,24 @@
 
 #include "celestial_body.h"
 
-CelestialBody::CelestialBody()
+CelestialBody::CelestialBody(double initial_julian_day):
+initial_julian_day_(initial_julian_day),
+time_system_(TimeSystem())
 {
-    // time_system_ = TimeSystem();
-    // TODO: initial_julian_day_
 }
 
 void CelestialBody::Update(double julian_date)
 {
     double delta_t_sec = time_system_.ConvDayToSec(julian_date - initial_julian_day_);
     double rotation_angle_rad = rotation_rate_rad_s_ * delta_t_sec;
-    double rot_mat[3][3];
-    rotation_matrix_around_z(rotation_angle_rad, rot_mat);
-    dcm_i_to_fixed_;  // TODO: dcm
+    // Just considering rotation around z axis
+    rotation_matrix_around_z(rotation_angle_rad, dcm_i_to_fixed_);
 
-    double revolution_angle_rad = revolution_rate_rad_s_ * delta_t_sec;
+    // Position and velocity update based on two-body
+    if (!center_body_)
+    {
+
+    }
 }
 
 void CelestialBody::rotation_matrix_around_z(double rotation_rad, double mat[3][3])

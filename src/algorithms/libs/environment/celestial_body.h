@@ -26,30 +26,28 @@
 class CelestialBody
 {
 public:
-    CelestialBody();
+    CelestialBody(double initial_julian_day);
     virtual ~CelestialBody();
 
     // TODO: for time, which system should be used? julian day, gregorian date, gps time?
-    void Update(double julian_date);
+    virtual void Update(double julian_date);
     inline double* GetPositionI(void) { return position_i_m_; };
     inline double* GetVelocityI(void) { return velocity_i_m_s_; };
 
-private:
+protected:
+    bool center_body_;
     double rotation_rate_rad_s_;  // around z axis
-    double revolution_rate_rad_s_;
-    double gravity_constant_;
+    double gravity_constant_;  // km3/s2
+    double radius_km_;
     double initial_julian_day_;
-
     TimeSystem time_system_;
 
-    // TODO: matrix or vector handling...
     double position_i_m_[3];
     double velocity_i_m_s_[3];
     double dcm_i_to_fixed_[3][3];  // for attitude
     double initial_position_i_m_[3];
     double initial_velocity_i_m_s_[3];
-    double initial_dcm_i_to_fixed_[3][3];
-
+private:
     void rotation_matrix_around_z(double rotation_rad, double mat[3][3]);
 };
 
