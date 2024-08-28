@@ -20,6 +20,7 @@ CelestialBody::CelestialBody(double initial_julian_day):
 initial_julian_day_(initial_julian_day),
 time_system_(TimeSystem())
 {
+    Update(initial_julian_day);
 }
 
 void CelestialBody::Update(double julian_date)
@@ -28,12 +29,6 @@ void CelestialBody::Update(double julian_date)
     double rotation_angle_rad = rotation_rate_rad_s_ * delta_t_sec;
     // Just considering rotation around z axis
     rotation_matrix_around_z(rotation_angle_rad, dcm_i_to_fixed_);
-
-    // Position and velocity update based on two-body
-    if (!center_body_)
-    {
-
-    }
 }
 
 void CelestialBody::rotation_matrix_around_z(double rotation_rad, double mat[3][3])

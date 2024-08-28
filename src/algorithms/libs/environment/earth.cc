@@ -20,7 +20,7 @@ Earth::Earth(double initial_julian_day):
 CelestialBody(initial_julian_day)
 {
     // NOTE: from the spice data base
-    rotation_rate_rad_s_ = 2 * M_PI / (24 * 3600.0); // FIXME:
+    rotation_rate_rad_s_ = 4.17807356e-3;  // TODO: other axis also has the angular velocity
     gravity_constant_ = 3.986004354360959e5;
     radius_km_ = 6378.1366;
 }

@@ -29,21 +29,19 @@ public:
     void Update(double julian_date) override;
 
 private:
-    // bool center_body_;
-    // double rotation_rate_rad_s_;  // around z axis
-    // double gravity_constant_;  // km3/s2
-    // double radius_m_;
-    // double initial_julian_day_;
+    double angular_momentum_[3];
+    double energy_;
+    double periapsis_vector_[3];
+    double a_;  // semi-major axis
+    double e_;  // eccentricity
+    double tp_J2000_;
+    double n_;  // Mean motion
+    double T_;  // period
 
-    // TimeSystem time_system_;
-
-    // double position_i_m_[3];
-    // double velocity_i_m_s_[3];
-    // double dcm_i_to_fixed_[3][3];  // for attitude
-    // double initial_position_i_m_[3];
-    // double initial_velocity_i_m_s_[3];
-
-    // void rotation_matrix_around_z(double rotation_rad, double mat[3][3]);
+    void InitOrbitElement(double et_J2000, double r_ini[3], double v_ini[3]);
+    void UpdateStates(double julian_date);
+    inline double KeplerEq(double E, double M) { return E - e_ * sin(E) - M; };
+    inline double KeplerEqDot(double E) { return 1 - e_ * cos(E); };
 };
 
 #endif  // GNSS_SDR_MOON_H

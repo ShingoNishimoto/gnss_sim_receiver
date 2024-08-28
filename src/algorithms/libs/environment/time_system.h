@@ -16,8 +16,8 @@
 #ifndef GNSS_SDR_TIME_SYSTEM_H
 #define GNSS_SDR_TIME_SYSTEM_H
 
-#include "date/date.h"
-#include "date/tz.h"
+// #include "date/date.h"
+// #include "date/tz.h"
 #include "rtklib.h"
 #include <cstdint>
 
@@ -27,10 +27,12 @@ public:
     TimeSystem();
     ~TimeSystem();
 
+    inline double ConvJ2000ToJulianDate(double t_J2000) const { return ConvSecToDay(t_J2000) + J2000_julian_; };
+    inline double ConvJulianDateToJ2000(double julian_day) const { return ConvDayToSec(julian_day - J2000_julian_); };
     double ConvGPSTimeToJulianDate(gtime_t gps_time);
     gtime_t ConvJulianDateToGPSTime(double julian_day);
-    inline const double ConvDayToSec(const double day) const { return day * sec_1_day_; };
-    inline const double ConvSecToDay(const double sec) const { return sec / sec_1_day_; };
+    inline double ConvDayToSec(const double day) const { return day * sec_1_day_; };
+    inline double ConvSecToDay(const double sec) const { return sec / sec_1_day_; };
     // double ConvGPSTimeToGregorianDate(gtime_t gps_time);
     // gtime_t ConvGregorianDateToGPSTime(double gregorian_date);
 

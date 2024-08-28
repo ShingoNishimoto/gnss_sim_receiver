@@ -35,7 +35,6 @@ public:
     inline double* GetVelocityI(void) { return velocity_i_m_s_; };
 
 protected:
-    bool center_body_;
     double rotation_rate_rad_s_;  // around z axis
     double gravity_constant_;  // km3/s2
     double radius_km_;
@@ -45,8 +44,8 @@ protected:
     double position_i_m_[3];
     double velocity_i_m_s_[3];
     double dcm_i_to_fixed_[3][3];  // for attitude
-    double initial_position_i_m_[3];
-    double initial_velocity_i_m_s_[3];
+    // double initial_position_i_m_[3];
+    // double initial_velocity_i_m_s_[3];
 private:
     void rotation_matrix_around_z(double rotation_rad, double mat[3][3]);
 };
