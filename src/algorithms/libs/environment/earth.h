@@ -19,15 +19,32 @@
 
 #include "celestial_body.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct Earth Earth;
+
+// Earth* EarthInit(int initial_gps_week, double initial_gps_sec);
+Earth* EarthInit(double julian_day);
+double EarthGravityConst(Earth* earth);
+void EarthDestroy(Earth* earth);
+
+#ifdef __cplusplus
+}
+#endif
+
+#ifdef __cplusplus
 class Earth: public CelestialBody
 {
 public:
-    Earth(double initial_julian_day);
-    ~Earth();
+    Earth(double J2000_julian);
+    virtual ~Earth();
 
-    // void Update(double julian_date) override;
+    void Update(double julian_day) override;
 
 private:
 };
+#endif
 
 #endif  // GNSS_SDR_EARTH_H

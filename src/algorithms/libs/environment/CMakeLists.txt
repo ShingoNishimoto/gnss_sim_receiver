@@ -4,10 +4,11 @@
 # SPDX-FileCopyrightText: 2010-2020 C. Fernandez-Prades cfernandez(at)cttc.es
 # SPDX-License-Identifier: BSD-3-Clause
 
-include_directories(../rtklib)
+# include_directories(../rtklib)
 
 set(ENVIRONMENT_SOURCES
     celestial_body.cc
+    frame.cc
     earth.cc
     moon.cc
     time_system.cc
@@ -15,6 +16,7 @@ set(ENVIRONMENT_SOURCES
 
 set(ENVIRONMENT_HEADERS
     celestial_body.h
+    frame.h
     earth.h
     moon.h
     time_system.h
@@ -41,7 +43,7 @@ endif()
 
 target_link_libraries(algorithms_libs_environment
     PRIVATE
-        core_system_parameters
+        # core_system_parameters
         algorithms_libs
         Glog::glog
         # LAPACK::LAPACK
@@ -67,4 +69,8 @@ endif()
 set_property(TARGET algorithms_libs_environment
     APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+)
+
+set_property(TARGET algorithms_libs_environment
+    APPEND PROPERTY POSITION_INDEPENDENT_CODE ON
 )
