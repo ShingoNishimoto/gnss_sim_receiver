@@ -41,6 +41,16 @@ else()
     )
 endif()
 
+# Setting for SPICE
+set(HOME_DIR $ENV{HOME})
+set(SPICE_LIB_DIR "${HOME_DIR}/work/cspice/lib/")
+set(SPICE_INCLUDE_DIR "${HOME_DIR}/work/cspice/include/")
+
+target_include_directories(algorithms_libs_environment
+    PRIVATE
+        ${SPICE_INCLUDE_DIR}
+)
+
 target_link_libraries(algorithms_libs_environment
     PRIVATE
         # core_system_parameters
@@ -48,6 +58,7 @@ target_link_libraries(algorithms_libs_environment
         Glog::glog
         # LAPACK::LAPACK
         # BLAS::BLAS
+        ${SPICE_LIB_DIR}cspice.a
 )
 
 if(ENABLE_ARMA_NO_DEBUG)

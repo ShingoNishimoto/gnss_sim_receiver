@@ -16,6 +16,7 @@
 
 #include "earth.h"
 #include <cstdint>
+#include <SpiceUsr.h>  // for SPICE
 
 Earth::Earth(double J2000_julian):
 CelestialBody(J2000_julian)
@@ -24,6 +25,8 @@ CelestialBody(J2000_julian)
     rotation_rate_rad_s_ = 4.17807356e-3;  // FIXME: other axis also has the angular velocity
     gravity_constant_ = 3.986004354360959e5;
     radius_km_ = 6378.1366;
+    inertial_frame_ = "J2000";
+    fixed_frame_ = "ITRF93";  // IAU_EARTH or ITRF93
 }
 
 Earth::~Earth()

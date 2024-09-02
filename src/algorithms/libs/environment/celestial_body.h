@@ -21,6 +21,7 @@
 // #include <Eigen/Dense>
 
 #ifdef __cplusplus
+#include <string>
 extern "C" {
 #endif
 
@@ -64,6 +65,8 @@ protected:
     double velocity_i_m_s_[3];
     double dcm_i_to_fixed_[3 * 3];  // for attitude
     double dcm_fixed_to_i_[3 * 3];  // for attitude
+    std::string inertial_frame_;
+    std::string fixed_frame_;
     // double initial_position_i_m_[3];
     // double initial_velocity_i_m_s_[3];
 private:
