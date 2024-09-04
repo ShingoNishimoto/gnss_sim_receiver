@@ -36,6 +36,7 @@ import utm
 from lib.gps_l1_ca_read_pvt_dump import gps_l1_ca_read_pvt_dump
 from lib.plotNavigation import plotNavigation
 from lib.plotPosition import plot_oneVStime, plot_position
+from lib.plotVisibility import plotVisibility
 from lib.read_user_position import get_interpolated_positions
 
 settings = {}
@@ -48,7 +49,8 @@ path = '/home/junichiro/work/gnss_sim_receiver/test/'
 pvt_raw_log_path = path + 'pvt.dat'
 nav_sol_period_ms = 100
 plot_skyplot = 0
-user_position_file_path = path + 'log/20240801161313.txt'
+user_position_file_path = path + 'log/20240904124332_ch1.txt'
+visibility_file_path = path + "log/20240904124332_visibility_ch1.txt"
 dynamic = True
 
 settings['navSolPeriod'] = nav_sol_period_ms
@@ -117,6 +119,7 @@ navSolutions['U_UTM'] = np.array(U_UTM)
 
 plotNavigation(navSolutions, settings, path, 'UTM', plot_skyplot, dynamic)
 plotNavigation(navSolutions, settings, path, 'ECEF', plot_skyplot, dynamic)
+plotVisibility(visibility_file_path, path)
 
 # OPTIONAL: Other plots ->
 if not dynamic:
