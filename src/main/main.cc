@@ -75,7 +75,7 @@ int bladegps_thread(bladerf* dev, std::string args)
 {
     std::string bladegps_args_ = args;
     // char *bladegps_argv_[20] = {"bladegps", NULL, };
-    char *bladegps_argv_[20] = {NULL, };
+    char *bladegps_argv_[1024] = {NULL, };
     int bladegps_argc_ = 1;  // NOTE: start from 1 to use optarg in bladegps_main()
     char workstr[1024];
     {
@@ -86,6 +86,11 @@ int bladegps_thread(bladerf* dev, std::string args)
         {
             bladegps_argv_[bladegps_argc_ ++] = token;
             token = strtok_r(NULL, " ", &context);
+            if (bladegps_argc_ >= 1024)
+            {
+                std::cerr << "Too many bladeGPS args!" << std::endl;
+                exit(EXIT_FAILURE);
+            }
         }
     }
     printf("Running bladeGPS with parameter:'%s'.\n", args.c_str());
