@@ -6,6 +6,7 @@
 
 
 add_subdirectory(rtklib)
+add_subdirectory(environment)
 
 set(GNSS_SPLIBS_SOURCES
     beidou_b1i_signal_replica.cc
@@ -97,6 +98,10 @@ if(NOT has_span)
             ${GNSSSDR_SOURCE_DIR}/src/algorithms/libs/gsl/include
     )
 endif()
+
+# Find libraries
+# find_package(Eigen3 3.4 REQUIRED)
+# date library
 
 target_link_libraries(algorithms_libs
     PUBLIC

@@ -99,7 +99,7 @@ def plotNavigation(navSolutions, settings, path, coord='UTM', plot_skyplot=0, dy
             rmse_3d = np.sqrt(
                 np.nanmean(error_positions[position_label[0]] ** 2) +
                 np.nanmean(error_positions[position_label[1]] ** 2) +
-                np.nanmean(error_positions[position_label[1]] ** 2)
+                np.nanmean(error_positions[position_label[2]] ** 2)
             )
 
             ref_point_lg_text = (f"Reference Position, Mean 3D error = "

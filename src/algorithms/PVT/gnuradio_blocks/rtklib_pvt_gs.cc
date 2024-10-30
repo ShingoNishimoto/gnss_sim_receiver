@@ -2334,20 +2334,63 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
             if (d_hybrid_mode && (d_ps_channel != -1) && !d_gnss_observables_map.empty())
                 {
                     auto itr = d_gnss_observables_map.find(d_ps_channel);
-                    // NOTE: Don't keep observing it. The pseudo range jump at the end of observation.
-                    // FIXME: think better way such as averaging multiple ranges, etc.
-                    // if (itr != d_gnss_observables_map.end())
-                    if (itr != d_gnss_observables_map.end() && !flag_ps_observed)
+                    // NOTE: There might be jump when fixing the dt and ending the measurement, so filtering pseudo range.
+                    static uint64_t ps_observe_count = 0;
+                    static double dt_total = 0.0;
+                    if (itr != d_gnss_observables_map.end())
+                    // if (itr != d_gnss_observables_map.end() && !flag_ps_observed)
                         {
                             auto pseudo_sat_observable = std::move(itr->second);
+                            double dt_current = pseudo_sat_observable.Pseudorange_m / SPEED_OF_LIGHT_M_S;
+                            LOG(INFO) << "dt_current: " << std::fixed << std::setprecision(10) << dt_current;
                             d_gnss_observables_map.erase(itr);
-                            dt_gnssr_aowr_s = pseudo_sat_observable.Pseudorange_m / SPEED_OF_LIGHT_M_S;
+
+                            const double dt_dev_thresh = 5.0 / SPEED_OF_LIGHT_M_S;
+                            static uint8_t dev_count = 0;
+                            static double dt_new_total = 0.0;
+                            static uint8_t dt_new_count = 0;
+                            static double dt_new = 0.0;
+                            if (dt_gnssr_aowr_s != 0 && fabs(dt_current - dt_gnssr_aowr_s) > dt_dev_thresh)
+                                {
+                                    LOG(INFO) << "PS's PR was deviated! Diff: " << std::fixed << std::setprecision(10) << dt_current - dt_gnssr_aowr_s;
+                                    dev_count++;
+                                    // Check whether it's deviation or jump of observation.
+                                    dt_new_total += dt_current;
+                                    dt_new = dt_new_total / dev_count;
+                                    if (dt_new != 0 && fabs(dt_current - dt_new) < dt_dev_thresh)
+                                        dt_new_count++;
+                                    else
+                                        dt_new_count = 0;
+                                }
+                            else
+                                {
+                                    dev_count = 0;
+                                    dt_total += dt_current;
+                                    ps_observe_count++;
+                                    dt_gnssr_aowr_s = dt_total / ps_observe_count;
+                                    LOG(INFO) << "dt_GNSSR-AOWR [s]: " << std::fixed << std::setprecision(10) << dt_gnssr_aowr_s;
+                                }
+
+                            if (dev_count >= 10)
+                                {
+                                    if (dt_new_count >= 10)
+                                        {
+                                            // New dt is observed. Reset.
+                                            dt_total = dt_new_total;
+                                            ps_observe_count = dt_new_count;
+                                            dt_gnssr_aowr_s = dt_new;
+                                        }
+                                    dev_count = 0;
+                                }
+
+                            // if (!flag_ps_observed)
+                            //     dt_gnssr_aowr_s = pseudo_sat_observable.Pseudorange_m / SPEED_OF_LIGHT_M_S;
                             flag_ps_observed = true;
                             // tx_tow_pseudo_sat_s = pseudo_sat_observable.interp_TOW_ms * 1e-3;
                         }
                 }
             // For debug
-            if (flag_ps_observed) LOG(INFO) << "dt_GNSSR-AOWR [s]: " << std::fixed << std::setprecision(10) << dt_gnssr_aowr_s;
+            // if (flag_ps_observed) LOG(INFO) << "dt_GNSSR-AOWR [s]: " << std::fixed << std::setprecision(10) << dt_gnssr_aowr_s;
 
             // ############ 2. APPLY HAS CORRECTIONS IF AVAILABLE ####
             if (d_use_has_corrections && !d_gnss_observables_map.empty())
