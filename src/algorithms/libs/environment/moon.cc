@@ -35,8 +35,8 @@ extern "C"
     extern void dgetrs_(char *, int *, int *, double *, int *, int *, double *, int *, int *);
 }
 
-Moon::Moon(double initial_julian_day, double mu_center_of_mass):
-CelestialBody(initial_julian_day),
+Moon::Moon(double initial_tt, double mu_center_of_mass):
+CelestialBody(initial_tt),
 mu_center_of_mass_(mu_center_of_mass)
 {
     // NOTE: from the spice data base
@@ -47,24 +47,24 @@ mu_center_of_mass_(mu_center_of_mass)
     inertial_frame_ = "J2000";  // MOON_J2000 is not available.
     fixed_frame_ = "IAU_MOON";  // MOON_ME or IAU_MOON
 
-    // NOTE: should be earlier than bladegps ephemeris file's time
-    double et_J2000 = 596466069.1829587;  // 2018 NOV 26 01:00:00
-    double r[3] = {-6.85737996e4, 3.34248086e5, 1.34431780e5};  // km
-    double v[3] = {-1.04911126, -2.22963119e-1, 3.18153224e-3};  // km/s
-    InitOrbitElement(et_J2000, r, v);
+    // // NOTE: should be earlier than bladegps ephemeris file's time
+    // double et_J2000 = 596466069.1829587;  // 2018 NOV 26 01:00:00
+    // double r[3] = {-6.85737996e4, 3.34248086e5, 1.34431780e5};  // km
+    // double v[3] = {-1.04911126, -2.22963119e-1, 3.18153224e-3};  // km/s
+    // InitOrbitElement(et_J2000, r, v);
 
-    UpdateStates(initial_julian_day);
+    UpdateStates(initial_tt);
 }
 
 Moon::~Moon()
 {
 }
 
-void Moon::Update(double julian_date)
+void Moon::Update(double tt)
 {
-    CelestialBody::Update(julian_date);
+    CelestialBody::Update(tt);
     // Position and velocity update based on two-body
-    UpdateStates(julian_date);
+    UpdateStates(tt);
 }
 
 void Moon::InitOrbitElement(double et_J2000, double r_ini[3], double v_ini[3])
@@ -113,9 +113,9 @@ void Moon::InitOrbitElement(double et_J2000, double r_ini[3], double v_ini[3])
     tp_J2000_ = et_J2000 - t_tp;
 }
 
-void Moon::UpdateStates(double julian_date)
+void Moon::UpdateStates(double tt)
 {
-    // const double t_J2000 = time_system_.ConvJulianDateToJ2000(julian_date);
+    // const double t_J2000 = time_system_.ConvJulianDateToTt(julian_date);
     // double t_tp_res = t_J2000 - tp_J2000_ - T_ * std::floor((t_J2000 - tp_J2000_) / T_);
     // double M = n_ * t_tp_res;
     // // Adjust to within 2pi
@@ -150,10 +150,9 @@ void Moon::UpdateStates(double julian_date)
     // matmul("NN", 3, 1, 3, 1, dcm_inplane_to_eci, vel_inplane_m_s, 0, velocity_i_m_s_);
 
     // SPICE based
-    double et = time_system_.ConvJulianDateToJ2000(julian_date);
     double lt;
     double states[6];
-    spkezr_c("MOON", et, "J2000", "NONE", "EARTH", states, &lt);
+    spkezr_c("MOON", tt, "J2000", "NONE", "EARTH", states, &lt);
     for (uint8_t i = 0; i < 3; i++)
         {
             position_i_m_[i] = states[i] * 1000;
@@ -161,7 +160,7 @@ void Moon::UpdateStates(double julian_date)
         }
     // spkpos_c("MOON", et, "J2000", "NONE", "EARTH", position_i_m_, &lt);
     double rotate[3][3];
-    pxform_c("J2000", "ITRF93", et, rotate);
+    pxform_c("J2000", "ITRF93", tt, rotate);
 }
 
 // Following functions are copy from rtklib_rtkcmn.cc
@@ -253,13 +252,13 @@ extern "C" {
         gps_time.week = initial_gps_week;
         gps_time.sec = initial_gps_sec;
         TimeSystem time_system = TimeSystem();
-        double initial_julian_day = time_system.ConvGPSTimeToJulianDate(gps_time);
-        return new Moon(initial_julian_day, mu_com);
+        double initial_tt = time_system.ConvGPSTimeToTt(gps_time);
+        return new Moon(initial_tt, mu_com);
     }
 
-    double* GetPositionI(Moon* moon, double julian_day)
+    double* GetPositionI(Moon* moon, double tt)
     {
-        moon->Update(julian_day);
+        moon->Update(tt);
         return moon->GetPositionI();
     }
 

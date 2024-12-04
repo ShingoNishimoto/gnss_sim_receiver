@@ -30,6 +30,7 @@
  -----------------------------------------------------------------------------
 """
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pyproj
 import utm
@@ -44,13 +45,14 @@ settings = {}
 # ---------- CHANGE HERE:
 # samplingFreq = 3e6
 # channels = 8
+# path = '/home/junichiro/Desktop/'
 path = '/home/junichiro/work/gnss_sim_receiver/test/'
 # path = '/home/junichiro/work/gnss_sim_receiver/test/cislunar/'
 pvt_raw_log_path = path + 'pvt.dat'
 nav_sol_period_ms = 100
 plot_skyplot = 0
-user_position_file_path = path + 'log/20240904124332_ch1.txt'
-visibility_file_path = path + "log/20240904124332_visibility_ch1.txt"
+user_position_file_path = path + 'log/20241202160749_ch2.txt'
+visibility_file_path = path + "log/20241202160749_visibility_ch2.txt"
 dynamic = True
 
 settings['navSolPeriod'] = nav_sol_period_ms
@@ -59,9 +61,34 @@ navSolutions = gps_l1_ca_read_pvt_dump(pvt_raw_log_path)
 if dynamic:
     true_position = get_interpolated_positions(user_position_file_path,
                                                np.array(navSolutions['RxTime']) - np.array(navSolutions['dt']))
+    # For debug
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 10), sharex=True)
+
+    position_time = np.array(navSolutions['RxTime']) - np.array(navSolutions['dt'])
+    color = 'tab:blue'
+    ax1.set_xlabel('Time (s)')
+    ax1.set_ylabel('X (m)', color=color)
+    ax1.plot(position_time, true_position[0], color=color, label='X')
+    ax1.tick_params(axis='y', labelcolor=color)
+    ax1.set_title('SC position vs Time')
+    ax1.grid(True)
+    ax2.set_ylabel('Y (m)', color=color)
+    ax2.plot(position_time, true_position[1], color=color, label='Y')
+    ax2.tick_params(axis='y', labelcolor=color)
+    ax2.grid(True)
+    ax3.set_ylabel('Z (m)', color=color)
+    ax3.plot(position_time, true_position[2], color=color, label='Z')
+    ax3.tick_params(axis='y', labelcolor=color)
+    ax3.grid(True)
+
+    plt.tight_layout()
+    plt.show()
+
 settings['true_position'] = {
                             # 'E_UTM':np.nan,'N_UTM':np.nan,'U_UTM':np.nan, 'X_ECEF':-4474292, 'Y_ECEF':2675793, 'Z_ECEF':-3663100} # Birch building -35.274508, 149.119008, 568
                             # 'E_UTM':500000,'N_UTM':3873043.06,'U_UTM':0, 'X_ECEF':-3698470, 'Y_ECEF':3698470, 'Z_ECEF':3637867} # 35, 135, 0
+                            # 'E_UTM':500000,'N_UTM':0.0,'U_UTM':0, 'X_ECEF':-4510024, 'Y_ECEF':4510024, 'Z_ECEF':0.0} # 0, 135, 0
+                            # 'E_UTM':690940.77,'N_UTM':6091664.70,'U_UTM':578.0, 'X_ECEF':-4472009, 'Y_ECEF':2676442, 'Z_ECEF':-3665415} # -35.3, 149.1, 578.0 (ANU)
                             # 'E_UTM':500000,'N_UTM':0,'U_UTM':4e8, 'X_ECEF':-287352736.0, 'Y_ECEF':287352736.0, 'Z_ECEF':0.0} # 0, 135, 4e8
                             'E_UTM': true_position[3],'N_UTM': true_position[4],'U_UTM': true_position[5], 'X_ECEF': true_position[0], 'Y_ECEF': true_position[1], 'Z_ECEF': true_position[2]} # dynamic, LEO
 
@@ -75,8 +102,8 @@ navSolutions['Z_ECEF'] = np.array(Z)
 utm_coords = []
 utm_e = []
 utm_n = []
-E_UTM = []
-N_UTM = []
+# E_UTM = []
+# N_UTM = []
 utm_zone = []
 
 for i in range(len(navSolutions['longitude'])):
@@ -88,20 +115,20 @@ for i in range(len(utm_coords)):
     utm_n.append(utm_coords[i][1])
     utm_zone.append(utm_coords[i][2])
 
-# Transform from Lat Long degrees to UTM coordinate system
-# It's supposed utm_zone and letter will not change during tracking
-input_projection = pyproj.CRS.from_string("+proj=longlat "
-                                          "+datum=WGS84 +no_defs")
+# # Transform from Lat Long degrees to UTM coordinate system
+# # It's supposed utm_zone and letter will not change during tracking
+# input_projection = pyproj.CRS.from_string("+proj=longlat "
+#                                           "+datum=WGS84 +no_defs")
 
-for i in range(len(navSolutions['longitude'])):
-    output_projection = pyproj.CRS (f"+proj=utm +zone={utm_zone[i]} "
-                                    f"+datum=WGS84 +units=m +no_defs")
-    transformer = pyproj.Transformer.from_crs(input_projection,
-                                              output_projection)
-    utm_e, utm_n = transformer.transform(navSolutions['longitude'][i],
-                                         navSolutions['latitude'][i])
-    E_UTM.append(utm_e)
-    N_UTM.append(utm_n)
+# for i in range(len(navSolutions['longitude'])):
+#     output_projection = pyproj.CRS (f"+proj=utm +zone={utm_zone[i]} "
+#                                     f"+datum=WGS84 +units=m +no_defs")
+#     transformer = pyproj.Transformer.from_crs(input_projection,
+#                                               output_projection)
+#     utm_e, utm_n = transformer.transform(navSolutions['longitude'][i],
+#                                          navSolutions['latitude'][i])
+#     E_UTM.append(utm_e)
+#     N_UTM.append(utm_n)
 
 # For up
 U_UTM = []
@@ -113,8 +140,8 @@ for i in range(len(X)):
     lon, lat, alt = transformer.transform(X[i], Y[i], Z[i])
     U_UTM.append(alt)
 
-navSolutions['E_UTM'] = np.array(E_UTM)
-navSolutions['N_UTM'] = np.array(N_UTM)
+navSolutions['E_UTM'] = np.array(utm_e)
+navSolutions['N_UTM'] = np.array(utm_n)
 navSolutions['U_UTM'] = np.array(U_UTM)
 
 plotNavigation(navSolutions, settings, path, 'UTM', plot_skyplot, dynamic)

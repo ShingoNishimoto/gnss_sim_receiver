@@ -27,7 +27,7 @@ extern "C" {
 typedef struct Moon Moon;
 
 Moon* MoonInit(int initial_gps_week, double initial_gps_sec, double mu_com);
-double* GetPositionI(Moon* moon, double julian_day);
+double* GetPositionI(Moon* moon, double tt);
 double GetRadiusKm(Moon* moon);
 void MoonDestroy(Moon* moon);
 
@@ -39,10 +39,10 @@ void MoonDestroy(Moon* moon);
 class Moon: public CelestialBody
 {
 public:
-    Moon(double initial_julian_day, double mu_center_of_mass);
+    Moon(double initial_tt, double mu_center_of_mass);
     virtual ~Moon();
 
-    void Update(double julian_date) override;
+    void Update(double tt) override;
 
 private:
     double angular_momentum_[3];
@@ -57,7 +57,7 @@ private:
     double mu_center_of_mass_;
 
     void InitOrbitElement(double et_J2000, double r_ini[3], double v_ini[3]);
-    void UpdateStates(double julian_date);
+    void UpdateStates(double tt);
     inline double KeplerEq(double E, double M) { return E - e_ * sin(E) - M; };
     inline double KeplerEqDot(double E) { return 1 - e_ * cos(E); };
 };
