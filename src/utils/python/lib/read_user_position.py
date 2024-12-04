@@ -28,7 +28,7 @@ import numpy as np
 import pandas as pd
 import pyproj
 import utm
-from scipy import interpolate
+from scipy.interpolate import CubicSpline
 
 
 def get_interpolated_positions(filename: str, receiver_time: np.array) -> np.array:
@@ -41,31 +41,40 @@ def read_user_position(filename: str) -> np.array:
     return user_positions
 
 def interpolate_user_position(user_positions: np.array, receiver_time: np.array) -> np.array:
+    # Scipy
+    interpolated_position = np.empty((3, len(receiver_time)))
+    for i in range(3):
+        cubic_spline = CubicSpline(user_positions.T[0], user_positions.T[i + 1], bc_type='natural')
+        interpolated_position[i] = cubic_spline(receiver_time)
 
-    df = pd.DataFrame({'t': user_positions.T[0], 'x': user_positions.T[1],
-                       'y': user_positions.T[2], 'z': user_positions.T[3]})
+    # # Pandas interpolation
+    # df = pd.DataFrame({'t': user_positions.T[0], 'x': user_positions.T[1],
+    #                    'y': user_positions.T[2], 'z': user_positions.T[3]})
 
-    original_size = len(user_positions)
-    for i in range(len(receiver_time)):
-        df.loc[i + original_size] = [receiver_time[i], np.nan, np.nan, np.nan]
+    # original_size = len(user_positions)
+    # for i in range(len(receiver_time)):
+    #     df.loc[i + original_size] = [receiver_time[i], np.nan, np.nan, np.nan]
 
-    df = df.sort_values('t')
-    df.reset_index(inplace=True, drop=True)
-    # FIXME: verify which method is the best
-    # Cubic spline interpolation
-    # df['x_interpolated'] = df['x'].interpolate(method='spline', order=3)
-    # df['y_interpolated'] = df['y'].interpolate(method='spline', order=3)
-    # df['z_interpolated'] = df['z'].interpolate(method='spline', order=3)
-    # Pchip interpolation
-    df['x_interpolated'] = df['x'].interpolate(method='pchip')
-    df['y_interpolated'] = df['y'].interpolate(method='pchip')
-    df['z_interpolated'] = df['z'].interpolate(method='pchip')
+    # df = df.sort_values('t')
+    # df.reset_index(inplace=True, drop=True)
+    # # Cubic spline interpolation
+    # # df['x_interpolated'] = df['x'].interpolate(method='spline', order=2)
+    # # df['y_interpolated'] = df['y'].interpolate(method='spline', order=2)
+    # # df['z_interpolated'] = df['z'].interpolate(method='spline', order=2)
+    # # Pchip interpolation
+    # # df['x_interpolated'] = df['x'].interpolate(method='pchip')
+    # # df['y_interpolated'] = df['y'].interpolate(method='pchip')
+    # # df['z_interpolated'] = df['z'].interpolate(method='pchip')
+    # # polynomial interpolation
+    # df['x_interpolated'] = df['x'].interpolate(method='polynomial', order=3)
+    # df['y_interpolated'] = df['y'].interpolate(method='polynomial', order=3)
+    # df['z_interpolated'] = df['z'].interpolate(method='polynomial', order=3)
 
-    df_interpolated = df.loc[df['x'].isna()]
+    # df_interpolated = df.loc[df['x'].isna()]
 
-    interpolated_position = np.array([df_interpolated['x_interpolated'].values,
-                                      df_interpolated['y_interpolated'].values,
-                                      df_interpolated['z_interpolated'].values])
+    # interpolated_position = np.array([df_interpolated['x_interpolated'].values,
+    #                                   df_interpolated['y_interpolated'].values,
+    #                                   df_interpolated['z_interpolated'].values])
     # Compute UTM
     UTM_positions = []
     for pos_ecef in interpolated_position.T:

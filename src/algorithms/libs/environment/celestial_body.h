@@ -35,21 +35,21 @@ typedef struct CelestialBody CelestialBody;
 class CelestialBody
 {
 public:
-    CelestialBody(double initial_julian_day);
+    CelestialBody(double initial_tt);
     virtual ~CelestialBody();
 
     // TODO: for time, which system should be used? julian day, gregorian date, gps time?
-    virtual void Update(double julian_day);
+    virtual void Update(double tt);
     inline double* GetPositionI(void) { return position_i_m_; };
     inline double* GetVelocityI(void) { return velocity_i_m_s_; };
     inline double GetRadiusKm(void) { return radius_km_; };
     inline double GetGravityConst(void) { return gravity_constant_; };
-    inline double* GetDcmI2Fixed(double julian_day) {
-        Update(julian_day);
+    inline double* GetDcmI2Fixed(double tt) {
+        Update(tt);
         return dcm_i_to_fixed_;
     };
-    inline double* GetDcmFixed2I(double julian_day) {
-        Update(julian_day);
+    inline double* GetDcmFixed2I(double tt) {
+        Update(tt);
         return dcm_fixed_to_i_;
     };
 
@@ -57,7 +57,7 @@ protected:
     double rotation_rate_rad_s_;  // around z axis
     double gravity_constant_;  // km3/s2
     double radius_km_;
-    double initial_julian_day_;
+    double initial_tt_;
     TimeSystem time_system_;
 
     // NOTE: position and velocity are represented in ECI (J2000)

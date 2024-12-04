@@ -25,18 +25,18 @@ time_system_(time_system)
 Frame::~Frame()
 {}
 
-void Frame::GetDcmEciToEcef(const double julian_day, double dcm[3 * 3])
+void Frame::GetDcmEciToEcef(const double tt, double dcm[3 * 3])
 {
-    double* dcm_eci_to_ecef = earth_->GetDcmI2Fixed(julian_day);
+    double* dcm_eci_to_ecef = earth_->GetDcmI2Fixed(tt);
     for (u_int8_t i = 0; i < 9; i++)
     {
         dcm[i] = dcm_eci_to_ecef[i];
     }
 }
 
-void Frame::GetDcmEcefToEci(const double julian_day, double dcm[3 * 3])
+void Frame::GetDcmEcefToEci(const double tt, double dcm[3 * 3])
 {
-    double* dcm_ecef_to_eci = earth_->GetDcmFixed2I(julian_day);
+    double* dcm_ecef_to_eci = earth_->GetDcmFixed2I(tt);
     for (u_int8_t i = 0; i < 9; i++)
     {
         dcm[i] = dcm_ecef_to_eci[i];
@@ -49,14 +49,14 @@ extern "C" {
         return new Frame(earth, moon, time_system);
     }
 
-    void GetDcmEciToEcef(Frame* frame, const double julian_day, double dcm[3 * 3])
+    void GetDcmEciToEcef(Frame* frame, const double tt, double dcm[3 * 3])
     {
-        frame->GetDcmEciToEcef(julian_day, dcm);
+        frame->GetDcmEciToEcef(tt, dcm);
     }
 
-    void GetDcmEcefToEci(Frame* frame, const double julian_day, double dcm[3 * 3])
+    void GetDcmEcefToEci(Frame* frame, const double tt, double dcm[3 * 3])
     {
-        frame->GetDcmEcefToEci(julian_day, dcm);
+        frame->GetDcmEcefToEci(tt, dcm);
     }
 
     void FrameDestroy(Frame* frame)

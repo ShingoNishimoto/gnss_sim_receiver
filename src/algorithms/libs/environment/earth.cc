@@ -18,8 +18,8 @@
 #include <cstdint>
 #include <SpiceUsr.h>  // for SPICE
 
-Earth::Earth(double J2000_julian):
-CelestialBody(J2000_julian)
+Earth::Earth(double initial_tt):
+CelestialBody(initial_tt)
 {
     // NOTE: from the spice data base
     rotation_rate_rad_s_ = 4.17807356e-3;  // FIXME: other axis also has the angular velocity
@@ -33,9 +33,9 @@ Earth::~Earth()
 {
 }
 
-void Earth::Update(double julian_day)
+void Earth::Update(double tt)
 {
-    CelestialBody::Update(julian_day);
+    CelestialBody::Update(tt);
 }
 
 extern "C" {
@@ -49,9 +49,9 @@ extern "C" {
     //     return new Earth(initial_julian_day);
     // }
 
-    Earth* EarthInit(double julian_day)
+    Earth* EarthInit(double tt)
     {
-        return new Earth(julian_day);
+        return new Earth(tt);
     }
 
     double EarthGravityConst(Earth* earth)

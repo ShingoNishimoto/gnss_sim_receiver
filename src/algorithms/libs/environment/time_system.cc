@@ -23,17 +23,37 @@ TimeSystem::TimeSystem()
 TimeSystem::~TimeSystem()
 {}
 
-double TimeSystem::ConvUtcToJulianDate(gtime_t utc)
-{
-    double fractional_day = (utc.time + utc.sec) / sec_1_day_;
-    double julian_day = utc_epoch_julian_ + fractional_day;
+// TimeSystem::gtime_t TimeSystem::ConvJulianDateToUtc(double julian_day)
+// {
+//     double utc_sec = (julian_day - utc_epoch_julian_) * sec_1_day_;
+//     gtime_t utc;
+//     utc.time = std::floor(utc_sec);
+//     utc.sec = utc_sec - utc.time;
 
-    return julian_day;
-}
+//     return utc;
+// }
 
-TimeSystem::gtime_t TimeSystem::ConvJulianDateToUtc(double julian_day)
+// double TimeSystem::ConvGPSTimeToJulianDate(gpstime_t gps_time)
+// {
+//     double fractional_day = gps_time.week * 7 + (gps_time.sec) / sec_1_day_;
+//     double julian_day = gps_epoch_julian_ + fractional_day;
+
+//     return julian_day;
+// }
+
+// TimeSystem::gpstime_t TimeSystem::ConvJulianDateToGPSTime(double julian_day)
+// {
+//     double gps_week = (julian_day - gps_epoch_julian_) / 7.0;
+//     gpstime_t gps_time;
+//     gps_time.week = std::floor(gps_week);
+//     gps_time.sec = (gps_week - gps_time.week) * 7 * sec_1_day_;
+
+//     return gps_time;
+// }
+
+TimeSystem::gtime_t TimeSystem::ConvTtToUtc(double tt)
 {
-    double utc_sec = (julian_day - utc_epoch_julian_) * sec_1_day_;
+    double utc_sec = tt - tai_to_tt_ - utc_to_tai_;
     gtime_t utc;
     utc.time = std::floor(utc_sec);
     utc.sec = utc_sec - utc.time;
@@ -41,24 +61,25 @@ TimeSystem::gtime_t TimeSystem::ConvJulianDateToUtc(double julian_day)
     return utc;
 }
 
-double TimeSystem::ConvGPSTimeToJulianDate(gpstime_t gps_time)
+double TimeSystem::ConvGPSTimeToTt(gpstime_t gps_time)
 {
-    double fractional_day = gps_time.week * 7 + (gps_time.sec) / sec_1_day_;
-    double julian_day = gps_epoch_julian_ + fractional_day;
+    double gps_days = (gps_time.week * 7);
+    double days_since_J2000_epoch = gps_days - (J2000_julian_ - gps_epoch_julian_);
+    double tt = ConvDayToSec(days_since_J2000_epoch) + gps_time.sec + gpst_to_tai_ + tai_to_tt_;
 
-    return julian_day;
+    return tt;
 }
 
-TimeSystem::gpstime_t TimeSystem::ConvJulianDateToGPSTime(double julian_day)
+TimeSystem::gpstime_t TimeSystem::ConvTtToGPSTime(double tt)
 {
-    double gps_week = (julian_day - gps_epoch_julian_) / 7.0;
+    double gps_sec = tt - tai_to_tt_ - gpst_to_tai_;
+    double gps_week = ConvSecToDay(gps_sec) / 7.0;
     gpstime_t gps_time;
     gps_time.week = std::floor(gps_week);
-    gps_time.sec = (gps_week - gps_time.week) * 7 * sec_1_day_;
+    gps_time.sec = ConvDayToSec((gps_week - gps_time.week) * 7);
 
     return gps_time;
 }
-
 
 extern "C" {
     TimeSystem* TimeSystemInit(void)
@@ -66,12 +87,12 @@ extern "C" {
         return new TimeSystem();
     }
 
-    double ConvGPSTimeToJulianDate(TimeSystem* time_system, int gps_week, double gps_sec)
+    double ConvGPSTimeToTt(TimeSystem* time_system, int gps_week, double gps_sec)
     {
         TimeSystem::gpstime_t gps_time;
         gps_time.week = gps_week;
         gps_time.sec = gps_sec;
-        return time_system->ConvGPSTimeToJulianDate(gps_time);
+        return time_system->ConvGPSTimeToTt(gps_time);
     }
 
     double GetJ2000EpochJulianDay(TimeSystem* time_system)

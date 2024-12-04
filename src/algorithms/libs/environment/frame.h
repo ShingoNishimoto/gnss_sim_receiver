@@ -27,8 +27,8 @@ extern "C" {
 typedef struct Frame Frame;
 
 Frame* FrameInit(Earth* earth, Moon* moon, TimeSystem* time_system);
-void GetDcmEciToEcef(Frame* frame, const double julian_day, double dcm[3 * 3]);
-void GetDcmEcefToEci(Frame* frame, const double julian_day, double dcm[3 * 3]);
+void GetDcmEciToEcef(Frame* frame, const double tt, double dcm[3 * 3]);
+void GetDcmEcefToEci(Frame* frame, const double tt, double dcm[3 * 3]);
 void FrameDestroy(Frame* frame);
 
 #ifdef __cplusplus
@@ -42,8 +42,8 @@ public:
     Frame(Earth* earth, Moon* moon, TimeSystem* time_system);
     virtual ~Frame();
 
-    void GetDcmEciToEcef(const double julian_day, double dcm[3 * 3]);
-    void GetDcmEcefToEci(const double julian_day, double dcm[3 * 3]);
+    void GetDcmEciToEcef(const double tt, double dcm[3 * 3]);
+    void GetDcmEcefToEci(const double tt, double dcm[3 * 3]);
     // TODO: others
 
 private:

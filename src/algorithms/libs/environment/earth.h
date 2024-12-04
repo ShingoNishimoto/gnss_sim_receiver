@@ -26,7 +26,7 @@ extern "C" {
 typedef struct Earth Earth;
 
 // Earth* EarthInit(int initial_gps_week, double initial_gps_sec);
-Earth* EarthInit(double julian_day);
+Earth* EarthInit(double tt);
 double EarthGravityConst(Earth* earth);
 void EarthDestroy(Earth* earth);
 
@@ -41,7 +41,7 @@ public:
     Earth(double J2000_julian);
     virtual ~Earth();
 
-    void Update(double julian_day) override;
+    void Update(double tt) override;
 
 private:
 };
