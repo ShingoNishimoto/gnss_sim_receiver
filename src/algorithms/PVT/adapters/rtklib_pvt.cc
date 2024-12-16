@@ -81,6 +81,12 @@ Rtklib_Pvt::Rtklib_Pvt(const ConfigurationInterface* configuration,
     pvt_output_parameters.system_ecef_pos_sd_m = configuration->property(role + ".kf_system_ecef_pos_sd_m", 2.0);
     pvt_output_parameters.system_ecef_vel_sd_ms = configuration->property(role + ".kf_system_ecef_vel_sd_ms", 0.5);
 
+    // PVT EKF settings
+    pvt_output_parameters.enable_pvt_ekf = configuration->property(role + ".enable_pvt_ekf_sat", false);
+    pvt_output_parameters.center_of_gravity_type = configuration->property(role + ".center_of_gravity", 0);
+    pvt_output_parameters.initial_ecef_pos_sd_m = configuration->property(role + ".ekf_initial_ecef_pos_sd_m", 100.0);
+    pvt_output_parameters.initial_ecef_vel_sd_ms = configuration->property(role + ".ekf_initial_ecef_vel_sd_ms", 1.0);
+
     // Receiver attitude settings
     pvt_output_parameters.rec_antenna_attitude_fix = configuration->property("ReceiverAntennaAttitude.fix", true);
     pvt_output_parameters.ini_rec_antenna_az_rad = configuration->property("ReceiverAntennaAttitude.az_deg", 0.0) * D2R;
@@ -500,6 +506,10 @@ Rtklib_Pvt::Rtklib_Pvt(const ConfigurationInterface* configuration,
     if (positioning_mode_str == "PPP_Kinematic")
         {
             positioning_mode = PMODE_PPP_KINEMA;
+        }
+    if (positioning_mode_str == "EKF_Satellite")
+        {
+            positioning_mode = PMODE_EKF_SAT;
         }
 
     if (positioning_mode == -1)

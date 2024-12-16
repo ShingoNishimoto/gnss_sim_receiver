@@ -111,7 +111,7 @@ const int PMODE_FIXED = 5;       //!<  positioning mode: fixed
 const int PMODE_PPP_KINEMA = 6;  //!<  positioning mode: PPP-kinemaric
 const int PMODE_PPP_STATIC = 7;  //!<  positioning mode: PPP-static
 const int PMODE_PPP_FIXED = 8;   //!<  positioning mode: PPP-fixed
-// FIXME: add EKF mode, but how about the dynamics model?
+const int PMODE_EKF_SAT = 9;   //!<  positioning mode: EKF for satellite orbit
 
 const int SOLF_LLH = 0;   //!<  solution format: lat/lon/height
 const int SOLF_XYZ = 1;   //!<  solution format: x/y/z-ecef

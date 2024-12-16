@@ -24,6 +24,7 @@ set(PVT_LIB_SOURCES
     has_simple_printer.cc
     geohash.cc
     pvt_kf.cc
+    pvt_ekf.cc
 )
 
 set(PVT_LIB_HEADERS
@@ -47,6 +48,7 @@ set(PVT_LIB_HEADERS
     has_simple_printer.h
     geohash.h
     pvt_kf.h
+    pvt_ekf.h
 )
 
 list(SORT PVT_LIB_HEADERS)
@@ -90,6 +92,7 @@ target_link_libraries(pvt_libs
         protobuf::libprotobuf
         core_system_parameters
         algorithms_libs_rtklib
+        algorithms_libs_environment
     PRIVATE
         algorithms_libs
         Gflags::gflags

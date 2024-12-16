@@ -76,32 +76,59 @@ def interpolate_user_position(user_positions: np.array, receiver_time: np.array)
     #                                   df_interpolated['y_interpolated'].values,
     #                                   df_interpolated['z_interpolated'].values])
     # Compute UTM
-    UTM_positions = []
-    for pos_ecef in interpolated_position.T:
-        UTM_positions.append(ecef_to_utm(pos_ecef))
+    # UTM_positions = []
+    # for pos_ecef in interpolated_position.T:
+    #     UTM_positions.append(ecef_to_utm(pos_ecef))
+    UTM_positions = ecef_to_utm(interpolated_position)
 
-    true_positions = np.append(interpolated_position, np.array(UTM_positions).T, axis=0)
+    true_positions = np.append(interpolated_position, UTM_positions, axis=0)
     return true_positions
     # return interpolated_position
 
 def ecef_to_utm(ecef_pos: np.array) -> np.array:
+    """
+    Convert an array of ECEF coordinates to UTM coordinates.
+
+    Args:
+        ecef_pos (np.array): Array of shape (3, N) with ECEF coordinates.
+
+    Returns:
+        np.array: Array of shape (3, N) with UTM coordinates.
+    """
     x_ecef = ecef_pos[0]
     y_ecef = ecef_pos[1]
     z_ecef = ecef_pos[2]
     # Define the WGS84 ellipsoid
-    wgs84 = pyproj.Proj(proj='geocent', ellps='WGS84', datum='WGS84')
+    # wgs84 = pyproj.Proj(proj='geocent', ellps='WGS84', datum='WGS84')
 
-    # Convert ECEF to lat/lon (geodetic coordinate)
-    lat_lan_proj = pyproj.Proj(proj='longlat', datum='WGS84')
-    transformer = pyproj.Transformer.from_crs(wgs84.crs, lat_lan_proj.crs)
-    lon, lat, alt = transformer.transform(x_ecef, y_ecef, z_ecef)
+    # # Convert ECEF to lat/lon (geodetic coordinate)
+    # lon_lat_proj = pyproj.Proj(proj='longlat', datum='WGS84')
+    # ecef_to_lla = pyproj.Transformer.from_crs(wgs84.crs, lon_lat_proj.crs)
+    ecef_to_lla = pyproj.Transformer.from_crs("EPSG:4978", "EPSG:4326", always_xy=True)
+    lon, lat, alt = ecef_to_lla.transform(x_ecef, y_ecef, z_ecef)
 
     # Define the output UTM projection
-    zone = utm.latlon_to_zone_number(lat, lon)
-    utm_proj = pyproj.Proj(proj='utm', zone=zone, datum='WGS84')
+    # zone = utm.latlon_to_zone_number(lat, lon)
+    zone = np.floor((lon + 180) / 6).astype(int) + 1
+    # hemisphere = "326" if lat.any() >= 0 else "327"
+    hemisphere_codes = np.where(lat >= 0, 326, 327)
+    # utm_epsg = f"EPSG:{hemisphere}{zone:02d}"
+    utm_epsg_codes = hemisphere_codes * 100 + zone
+    # utm_crs = pyproj.CRS.from_epsg(utm_epsg)
+    old_epsg = utm_epsg_codes[0]
+    ecef_to_utm = pyproj.Transformer.from_crs("EPSG:4978", old_epsg, always_xy=True)
+
+    utm_pos = np.zeros_like(ecef_pos.T)
+    for i in range(len(utm_epsg_codes)):
+        utm_epsg = utm_epsg_codes[i]
+        if (utm_epsg != old_epsg):
+            ecef_to_utm = pyproj.Transformer.from_crs("EPSG:4978", utm_epsg, always_xy=True)
+            old_epsg = utm_epsg
+
+        utm_pos[i] = ecef_to_utm.transform(x_ecef[i], y_ecef[i], z_ecef[i])
 
     # Convert lat/lon to UTM
-    transformer = pyproj.Transformer.from_crs(lat_lan_proj.crs, utm_proj.crs)
-    easting, northing = transformer.transform(lon, lat)
+    # easting, northing, alt = ecef_to_utm.transform(x_ecef, y_ecef, z_ecef)
 
-    return np.array([easting, northing, alt])
+    # return np.array([easting, northing, alt])
+    return utm_pos.T

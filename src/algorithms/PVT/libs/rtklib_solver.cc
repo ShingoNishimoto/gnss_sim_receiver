@@ -1512,7 +1512,39 @@ bool Rtklib_Solver::get_PVT(const std::map<int, Gnss_Synchro> &gnss_observables_
                 // FIXME: bring from outside
             }
 
-            result = rtkpos(&d_rtk, d_obs_data.data(), valid_obs + glo_valid_obs, &d_nav_data);
+            if (d_conf.enable_pvt_ekf)
+                {
+                    if (!d_pvt_ekf.is_initialized())
+                        {
+                            result = rtkpos(&d_rtk, d_obs_data.data(), valid_obs + glo_valid_obs, &d_nav_data);
+                            // if ()
+                            const double clock_bias_m = (d_rtk.sol.stat == SOLQ_SINGLE) ? d_rtk.sol.dtr[0] * SPEED_OF_LIGHT_M_S : d_rtk.sol.dtr[0];
+                            if (result != 0 && fabs(clock_bias_m / SPEED_OF_LIGHT_M_S) < kf_update_interval_s)  // FIXME: temporary to get corrected clock offset.
+                                {
+                                    // const double clock_bias_m = (d_rtk.sol.stat == SOLQ_SINGLE) ? d_rtk.sol.dtr[0] * SPEED_OF_LIGHT_M_S : d_rtk.sol.dtr[0];
+                                    // NOTE: clock bias and drift is in m and m/s
+                                    arma::vec x_ecef = {d_rtk.sol.rr[0], d_rtk.sol.rr[1], d_rtk.sol.rr[2], clock_bias_m, d_rtk.sol.rr[3], d_rtk.sol.rr[4], d_rtk.sol.rr[5], d_rtk.sol.dtr[5]};
+                                    d_pvt_ekf.init_Ekf(x_ecef,
+                                        d_rtk.sol.time,
+                                        static_cast<FrameType>(d_conf.center_of_gravity_type),
+                                        kf_update_interval_s,
+                                        d_conf.initial_ecef_pos_sd_m,
+                                        d_conf.initial_ecef_vel_sd_ms,
+                                        d_conf.measures_ecef_pos_sd_m,
+                                        d_conf.measures_ecef_vel_sd_ms,
+                                        d_conf.system_ecef_pos_sd_m,
+                                        d_conf.system_ecef_vel_sd_ms);
+                                }
+                        }
+                    else
+                        {
+                            result = d_pvt_ekf.run_Ekf(&d_rtk, d_obs_data.data(), valid_obs + glo_valid_obs, &d_nav_data);
+                        }
+                }
+            else
+                {
+                    result = rtkpos(&d_rtk, d_obs_data.data(), valid_obs + glo_valid_obs, &d_nav_data);
+                }
 
             if (result == 0)
                 {
@@ -1523,6 +1555,10 @@ bool Rtklib_Solver::get_PVT(const std::map<int, Gnss_Synchro> &gnss_observables_
                     if (d_conf.enable_pvt_kf == true)
                         {
                             d_pvt_kf.reset_Kf();
+                        }
+                    if (d_conf.enable_pvt_ekf == true)
+                        {
+                            d_pvt_ekf.reset_Kf();
                         }
                 }
             else

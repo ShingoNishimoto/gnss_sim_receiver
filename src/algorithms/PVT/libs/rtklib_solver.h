@@ -58,6 +58,7 @@
 #include "monitor_pvt.h"
 #include "pvt_conf.h"
 #include "pvt_kf.h"
+#include "pvt_ekf.h"
 #include "pvt_solution.h"
 #include "rtklib.h"
 #include "rtklib_conversions.h"
@@ -154,6 +155,7 @@ private:
     Monitor_Pvt d_monitor_pvt{};
     Pvt_Conf d_conf;
     Pvt_Kf d_pvt_kf;
+    Pvt_Ekf d_pvt_ekf;
     uint32_t d_type_of_rx;
     bool d_flag_dump_enabled;
     bool d_flag_dump_mat_enabled;
