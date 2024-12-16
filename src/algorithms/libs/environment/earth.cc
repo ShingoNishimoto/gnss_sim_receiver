@@ -27,6 +27,7 @@ CelestialBody(initial_tt)
     radius_km_ = 6378.1366;
     inertial_frame_ = "J2000";
     fixed_frame_ = "ITRF93";  // IAU_EARTH or ITRF93
+    body_name_ = "EARTH";
 }
 
 Earth::~Earth()
@@ -49,18 +50,18 @@ extern "C" {
     //     return new Earth(initial_julian_day);
     // }
 
-    Earth* EarthInit(double tt)
+    earth* EarthInit(double tt)
     {
-        return new Earth(tt);
+        return reinterpret_cast<earth*>(new Earth(tt));
     }
 
-    double EarthGravityConst(Earth* earth)
+    double EarthGravityConst(earth* earth)
     {
-        return earth->GetGravityConst();
+        return reinterpret_cast<Earth*>(earth)->GetGravityConst();
     }
 
-    void EarthDestroy(Earth* earth)
+    void EarthDestroy(earth* earth)
     {
-        delete earth;
+        delete reinterpret_cast<Earth*>(earth);
     }
 }

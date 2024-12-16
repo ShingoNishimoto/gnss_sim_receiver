@@ -45,7 +45,8 @@ mu_center_of_mass_(mu_center_of_mass)
     radius_km_ = 1737.4;
 
     inertial_frame_ = "J2000";  // MOON_J2000 is not available.
-    fixed_frame_ = "IAU_MOON";  // MOON_ME or IAU_MOON
+    fixed_frame_ = "MOON_PA";  // MOON_ME or MOON_PA. IAU_MOON is not accurate.
+    body_name_ = "MOON";
 
     // // NOTE: should be earlier than bladegps ephemeris file's time
     // double et_J2000 = 596466069.1829587;  // 2018 NOV 26 01:00:00
@@ -152,15 +153,15 @@ void Moon::UpdateStates(double tt)
     // SPICE based
     double lt;
     double states[6];
-    spkezr_c("MOON", tt, "J2000", "NONE", "EARTH", states, &lt);
+    spkezr_c(body_name_.c_str(), tt, inertial_frame_.c_str(), "NONE", "EARTH", states, &lt);
     for (uint8_t i = 0; i < 3; i++)
         {
             position_i_m_[i] = states[i] * 1000;
             velocity_i_m_s_[i] = states[3 + i] * 1000;
         }
     // spkpos_c("MOON", et, "J2000", "NONE", "EARTH", position_i_m_, &lt);
-    double rotate[3][3];
-    pxform_c("J2000", "ITRF93", tt, rotate);
+    // double rotate[3][3];
+    // pxform_c("J2000", "ITRF93", tt, rotate);
 }
 
 // Following functions are copy from rtklib_rtkcmn.cc
@@ -246,29 +247,29 @@ int normv3(const double *a, double *b)
 // }
 
 extern "C" {
-    Moon* MoonInit(int initial_gps_week, double initial_gps_sec, double mu_com)
+    moon* MoonInit(int initial_gps_week, double initial_gps_sec, double mu_com)
     {
         TimeSystem::gpstime_t gps_time;
         gps_time.week = initial_gps_week;
         gps_time.sec = initial_gps_sec;
         TimeSystem time_system = TimeSystem();
         double initial_tt = time_system.ConvGPSTimeToTt(gps_time);
-        return new Moon(initial_tt, mu_com);
+        return reinterpret_cast<moon*>(new Moon(initial_tt, mu_com));
     }
 
-    double* GetPositionI(Moon* moon, double tt)
+    const double* GetPositionI(moon* moon, double tt)
     {
-        moon->Update(tt);
-        return moon->GetPositionI();
+        reinterpret_cast<Moon*>(moon)->Update(tt);
+        return reinterpret_cast<Moon*>(moon)->GetPositionI();
     }
 
-    double GetRadiusKm(Moon* moon)
+    double GetRadiusKm(moon* moon)
     {
-        return moon->GetRadiusKm();
+        return reinterpret_cast<Moon*>(moon)->GetRadiusKm();
     }
 
-    void MoonDestroy(Moon* moon)
+    void MoonDestroy(moon* moon)
     {
-        delete moon;
+        delete reinterpret_cast<Moon*>(moon);
     }
 }

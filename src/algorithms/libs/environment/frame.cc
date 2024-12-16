@@ -44,9 +44,9 @@ void Frame::GetDcmEcefToEci(const double tt, double dcm[3 * 3])
 }
 
 extern "C" {
-    Frame* FrameInit(Earth* earth, Moon* moon, TimeSystem* time_system)
+    Frame* FrameInit(earth* earth, moon* moon, TimeSystem* time_system)
     {
-        return new Frame(earth, moon, time_system);
+        return new Frame(reinterpret_cast<Earth*>(earth), reinterpret_cast<Moon*>(moon), time_system);
     }
 
     void GetDcmEciToEcef(Frame* frame, const double tt, double dcm[3 * 3])

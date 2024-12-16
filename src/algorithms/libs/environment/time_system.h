@@ -22,21 +22,6 @@
 #include <time.h>
 
 #ifdef __cplusplus
-extern "C" {
-#endif
-
-typedef struct TimeSystem TimeSystem;
-
-TimeSystem* TimeSystemInit(void);
-double ConvGPSTimeToTt(TimeSystem* time_system, int gps_week, double gps_sec);
-double GetJ2000EpochJulianDay(TimeSystem* time_system);
-void TimeSystemDestroy(TimeSystem* time_system);
-
-#ifdef __cplusplus
-}
-#endif
-
-#ifdef __cplusplus
 class TimeSystem
 {
 public:
@@ -65,6 +50,8 @@ public:
     gtime_t ConvTtToUtc(double tt);
     // gtime_t ConvJulianDateToUtc(double julian_day);
     double ConvGPSTimeToTt(gpstime_t gps_time);
+    // FIXME: implement it.
+    double ConvGPSTimeToTt(const gtime_t gps_time);
     // double ConvGPSTimeToJulianDate(gpstime_t gps_time);
     gpstime_t ConvTtToGPSTime(double tt);
     // gpstime_t ConvJulianDateToGPSTime(double julian_day);
@@ -90,6 +77,21 @@ private:
     // const date::sys_days gps_epoch_ = 1980_y/January/6;
     const double sec_1_day_ = 86400.0;
 };
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct TimeSystem TimeSystem;
+
+TimeSystem* TimeSystemInit(void);
+double ConvGPSTimeToTt(TimeSystem* time_system, int gps_week, double gps_sec);
+double GetJ2000EpochJulianDay(TimeSystem* time_system);
+void TimeSystemDestroy(TimeSystem* time_system);
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif  // GNSS_SDR_TIME_SYSTEM_H

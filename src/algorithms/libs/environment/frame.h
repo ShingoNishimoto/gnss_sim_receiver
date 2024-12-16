@@ -21,21 +21,6 @@
 // #include "time_system.h"
 
 #ifdef __cplusplus
-extern "C" {
-#endif
-
-typedef struct Frame Frame;
-
-Frame* FrameInit(Earth* earth, Moon* moon, TimeSystem* time_system);
-void GetDcmEciToEcef(Frame* frame, const double tt, double dcm[3 * 3]);
-void GetDcmEcefToEci(Frame* frame, const double tt, double dcm[3 * 3]);
-void FrameDestroy(Frame* frame);
-
-#ifdef __cplusplus
-}
-#endif
-
-#ifdef __cplusplus
 class Frame
 {
 public:
@@ -44,7 +29,8 @@ public:
 
     void GetDcmEciToEcef(const double tt, double dcm[3 * 3]);
     void GetDcmEcefToEci(const double tt, double dcm[3 * 3]);
-    // TODO: others
+    inline Earth* GetEarth(void) const { return earth_; };
+    inline Moon* GetMoon(void) const { return moon_; };
 
 private:
     // NOTE: ECI=J2000
@@ -52,6 +38,21 @@ private:
     Moon* moon_;
     TimeSystem* time_system_;
 };
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct Frame Frame;
+
+Frame* FrameInit(earth* earth, moon* moon, TimeSystem* time_system);
+void GetDcmEciToEcef(Frame* frame, const double tt, double dcm[3 * 3]);
+void GetDcmEcefToEci(Frame* frame, const double tt, double dcm[3 * 3]);
+void FrameDestroy(Frame* frame);
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif  // GNSS_SDR_FRAME_H
