@@ -70,6 +70,14 @@ double TimeSystem::ConvGPSTimeToTt(gpstime_t gps_time)
     return tt;
 }
 
+double TimeSystem::ConvGPSTimeToTt(const gtime_t gps_time)
+{
+    double time_since_J2000_epoch = static_cast<double>(gps_time.time) - ConvDayToSec(J2000_julian_ - gps_epoch_julian_);
+    double tt = time_since_J2000_epoch + gps_time.sec + gpst_to_tai_ + tai_to_tt_;
+
+    return tt;
+}
+
 TimeSystem::gpstime_t TimeSystem::ConvTtToGPSTime(double tt)
 {
     double gps_sec = tt - tai_to_tt_ - gpst_to_tai_;

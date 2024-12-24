@@ -81,6 +81,13 @@ Rtklib_Pvt::Rtklib_Pvt(const ConfigurationInterface* configuration,
     pvt_output_parameters.system_ecef_pos_sd_m = configuration->property(role + ".kf_system_ecef_pos_sd_m", 2.0);
     pvt_output_parameters.system_ecef_vel_sd_ms = configuration->property(role + ".kf_system_ecef_vel_sd_ms", 0.5);
 
+    // PVT EKF settings
+    pvt_output_parameters.center_of_gravity_type = configuration->property(role + ".center_of_gravity", 0);
+    pvt_output_parameters.initial_ecef_pos_sd_m = configuration->property(role + ".ekf_initial_ecef_pos_sd_m", 100.0);
+    pvt_output_parameters.initial_ecef_vel_sd_ms = configuration->property(role + ".ekf_initial_ecef_vel_sd_ms", 1.0);
+    pvt_output_parameters.system_clock_offset_sd_m = configuration->property(role + ".ekf_system_clock_offset_sd_m", 100.0);
+    pvt_output_parameters.system_clock_drift_sd_ms = configuration->property(role + ".ekf_system_clock_drift_sd_ms", 1.0);
+
     // Receiver attitude settings
     pvt_output_parameters.rec_antenna_attitude_fix = configuration->property("ReceiverAntennaAttitude.fix", true);
     pvt_output_parameters.ini_rec_antenna_az_rad = configuration->property("ReceiverAntennaAttitude.az_deg", 0.0) * D2R;
@@ -481,6 +488,7 @@ Rtklib_Pvt::Rtklib_Pvt(const ConfigurationInterface* configuration,
     int positioning_mode = -1;
     const std::string default_pos_mode("Single");
     const std::string positioning_mode_str = configuration->property(role + ".positioning_mode", default_pos_mode);  // (PMODE_XXX) see src/algorithms/libs/rtklib/rtklib.h
+    pvt_output_parameters.enable_pvt_ekf = false;
     if (positioning_mode_str == "Single")
         {
             positioning_mode = PMODE_SINGLE;
@@ -500,6 +508,11 @@ Rtklib_Pvt::Rtklib_Pvt(const ConfigurationInterface* configuration,
     if (positioning_mode_str == "PPP_Kinematic")
         {
             positioning_mode = PMODE_PPP_KINEMA;
+        }
+    if (positioning_mode_str == "EKF_Satellite")
+        {
+            positioning_mode = PMODE_EKF_SAT;
+            pvt_output_parameters.enable_pvt_ekf = true;
         }
 
     if (positioning_mode == -1)

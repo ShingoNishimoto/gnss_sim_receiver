@@ -110,6 +110,14 @@ public:
     double system_ecef_pos_sd_m = 0.01;
     double system_ecef_vel_sd_ms = 0.001;
 
+    // PVT EKF parameters for satellite positioning
+    bool enable_pvt_ekf = false;
+    uint8_t center_of_gravity_type = 0;
+    double initial_ecef_pos_sd_m = 100;
+    double initial_ecef_vel_sd_ms = 1;
+    double system_clock_offset_sd_m = 0.1;
+    double system_clock_drift_sd_ms = 0.01;
+
     // Receiver antenna attitude
     double ini_rec_antenna_az_rad = 0 * D2R;
     double ini_rec_antenna_el_rad = 90 * D2R;

@@ -21,21 +21,7 @@
 
 #ifdef __cplusplus
 #include <cmath>
-extern "C" {
-#endif
 
-typedef struct Moon Moon;
-
-Moon* MoonInit(int initial_gps_week, double initial_gps_sec, double mu_com);
-double* GetPositionI(Moon* moon, double tt);
-double GetRadiusKm(Moon* moon);
-void MoonDestroy(Moon* moon);
-
-#ifdef __cplusplus
-}
-#endif
-
-#ifdef __cplusplus
 class Moon: public CelestialBody
 {
 public:
@@ -61,6 +47,21 @@ private:
     inline double KeplerEq(double E, double M) { return E - e_ * sin(E) - M; };
     inline double KeplerEqDot(double E) { return 1 - e_ * cos(E); };
 };
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct moon moon;
+
+moon* MoonInit(int initial_gps_week, double initial_gps_sec, double mu_com);
+const double* GetPositionI(moon* moon, double tt);
+double GetRadiusKm(moon* moon);
+void MoonDestroy(moon* moon);
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif  // GNSS_SDR_MOON_H

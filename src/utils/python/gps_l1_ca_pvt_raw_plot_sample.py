@@ -38,7 +38,7 @@ from lib.gps_l1_ca_read_pvt_dump import gps_l1_ca_read_pvt_dump
 from lib.plotNavigation import plotNavigation
 from lib.plotPosition import plot_oneVStime, plot_position
 from lib.plotVisibility import plotVisibility
-from lib.read_user_position import get_interpolated_positions
+from lib.read_user_position import ecef_to_utm, get_interpolated_positions
 
 settings = {}
 
@@ -51,13 +51,14 @@ path = '/home/junichiro/work/gnss_sim_receiver/test/'
 pvt_raw_log_path = path + 'pvt.dat'
 nav_sol_period_ms = 100
 plot_skyplot = 0
-user_position_file_path = path + 'log/20241202160749_ch2.txt'
-visibility_file_path = path + "log/20241202160749_visibility_ch2.txt"
+user_position_file_path = path + 'log/20241216173110_ch1.txt'
+visibility_file_path = path + "log/20241216173110_visibility_ch1.txt"
 dynamic = True
 
 settings['navSolPeriod'] = nav_sol_period_ms
 
 navSolutions = gps_l1_ca_read_pvt_dump(pvt_raw_log_path)
+# FIXME: add csv generator from pvt dump to generate plot.
 if dynamic:
     true_position = get_interpolated_positions(user_position_file_path,
                                                np.array(navSolutions['RxTime']) - np.array(navSolutions['dt']))
@@ -99,49 +100,17 @@ navSolutions['X_ECEF'] = np.array(X)
 navSolutions['Y_ECEF'] = np.array(Y)
 navSolutions['Z_ECEF'] = np.array(Z)
 
-utm_coords = []
-utm_e = []
-utm_n = []
-# E_UTM = []
-# N_UTM = []
-utm_zone = []
+ecef_positions = np.array([X, Y, Z])
+utm_position = ecef_to_utm(ecef_positions)
+E_UTM = utm_position[0]
+N_UTM = utm_position[1]
+# To avoid the discontinuity in UTM result TODO: for dynamic data.
+if not dynamic and settings['true_position']['N_UTM'] == 0:
+  N_UTM = np.where(N_UTM >= 9e6, N_UTM - 1e7, N_UTM)
+U_UTM = utm_position[2]
 
-for i in range(len(navSolutions['longitude'])):
-    utm_coords.append(utm.from_latlon(navSolutions['latitude'][i],
-                                      navSolutions['longitude'][i]))
-
-for i in range(len(utm_coords)):
-    utm_e.append(utm_coords[i][0])
-    utm_n.append(utm_coords[i][1])
-    utm_zone.append(utm_coords[i][2])
-
-# # Transform from Lat Long degrees to UTM coordinate system
-# # It's supposed utm_zone and letter will not change during tracking
-# input_projection = pyproj.CRS.from_string("+proj=longlat "
-#                                           "+datum=WGS84 +no_defs")
-
-# for i in range(len(navSolutions['longitude'])):
-#     output_projection = pyproj.CRS (f"+proj=utm +zone={utm_zone[i]} "
-#                                     f"+datum=WGS84 +units=m +no_defs")
-#     transformer = pyproj.Transformer.from_crs(input_projection,
-#                                               output_projection)
-#     utm_e, utm_n = transformer.transform(navSolutions['longitude'][i],
-#                                          navSolutions['latitude'][i])
-#     E_UTM.append(utm_e)
-#     N_UTM.append(utm_n)
-
-# For up
-U_UTM = []
-transformer = pyproj.Transformer.from_crs(
-    {"proj":'geocent', "ellps":'WGS84', "datum":'WGS84'},
-    {"proj":'latlong', "ellps":'WGS84', "datum":'WGS84'},
-    )
-for i in range(len(X)):
-    lon, lat, alt = transformer.transform(X[i], Y[i], Z[i])
-    U_UTM.append(alt)
-
-navSolutions['E_UTM'] = np.array(utm_e)
-navSolutions['N_UTM'] = np.array(utm_n)
+navSolutions['E_UTM'] = np.array(E_UTM)
+navSolutions['N_UTM'] = np.array(N_UTM)
 navSolutions['U_UTM'] = np.array(U_UTM)
 
 plotNavigation(navSolutions, settings, path, 'UTM', plot_skyplot, dynamic)
