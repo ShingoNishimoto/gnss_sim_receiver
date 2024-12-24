@@ -22,6 +22,7 @@
 #include "../../libs/rtklib/rtklib_rtkpos.h"
 #include <glog/logging.h>
 #include <iomanip>
+#include <cassert>
 
 // #define EKF_DEBUG
 // #define EKF_ECEF
@@ -41,7 +42,9 @@ void Pvt_Ekf::init_Ekf(const arma::vec& x_ecef,
     double measures_pos_sd_m,
     double measures_vel_sd_ms,
     double system_pos_sd_m,
-    double system_vel_sd_ms)
+    double system_vel_sd_ms,
+    double system_clock_offset_sd_m,
+    double system_clock_drift_sd_ms)
 {
     // For the frame
     TimeSystem* ts = new TimeSystem();
@@ -72,18 +75,23 @@ void Pvt_Ekf::init_Ekf(const arma::vec& x_ecef,
     const double Ti = update_interval_s;
 
     d_F = arma::eye(8, 8);
+    d_F.at(3, 3) = 0.0;
+    d_F.at(7, 7) = 0.0;
 
     d_measures_pos_sd_m = measures_pos_sd_m;
     d_measures_vel_sd_ms = measures_vel_sd_ms;
 
     // system covariance matrix
     d_Q = arma::zeros(8, 8);
-    arma::mat I_44 = arma::eye(4, 4);
-    d_Q.submat(0, 0, 3, 3) = pow(system_pos_sd_m, 2) * I_44;
-    d_Q.submat(4, 4, 7, 7) = pow(system_vel_sd_ms, 2) * I_44;
+    arma::mat I_33 = arma::eye(3, 3);
+    d_Q.submat(0, 0, 2, 2) = pow(system_pos_sd_m, 2) * I_33;
+    d_Q(3, 3) = pow(system_clock_offset_sd_m, 2);  // Clock offset.
+    d_Q.submat(4, 4, 6, 6) = pow(system_vel_sd_ms, 2) * I_33;
+    d_Q(7, 7) = pow(system_clock_drift_sd_ms, 2);  // Clock drift.
 
     // initial Kalman covariance matrix
     d_P_old_old = d_Q;
+    arma::mat I_44 = arma::eye(4, 4);
     d_P_old_old.submat(0, 0, 3, 3) = pow(initial_pos_sd_m, 2) * I_44;
     d_P_old_old.submat(4, 4, 7, 7) = pow(initial_vel_sd_ms, 2) * I_44;
     d_P_new_old = d_P_old_old;
@@ -123,11 +131,12 @@ int Pvt_Ekf::run_Ekf(rtk_t *rtk, const obsd_t *obs, int n, const nav_t *nav)
 
             DLOG(INFO) << "F: " << d_F;
             DLOG(INFO) << "P: " << d_P_new_old;
-            std::streamsize ss = std::cout.precision();
-            DLOG(INFO) << "x: " << std::fixed << std::setprecision(8) << d_x_new_old;
+            DLOG(INFO) << "x: " << d_x_new_old;
             // reset F
             static arma::mat I_88 = arma::eye(8, 8);
             d_F = I_88;
+            d_F.at(3, 3) = 0.0;
+            d_F.at(7, 7) = 0.0;
             // Measurement update
             try
                 {
@@ -189,9 +198,9 @@ int Pvt_Ekf::run_Ekf(rtk_t *rtk, const obsd_t *obs, int n, const nav_t *nav)
                     x_part_ecef(row_0_2) = x_new_new_ecef(row_0_2);
                     x_part_ecef(row_3_5) = x_new_new_ecef(row_4_6);
                     conv_states_ecef2i(x_part_ecef, x_part_i);
-#ifdef EKF_ECEF
                     d_x_new_new = x_new_new_ecef;
-#else
+                    // d_x_new_new(7) = x_new_new_ecef(7);
+#ifndef EKF_ECEF
                     d_x_new_new(row_0_2) = x_part_i(row_0_2);
                     d_x_new_new(row_4_6) = x_part_i(row_3_5);
 #endif  // EKF_ECEF
@@ -204,13 +213,33 @@ int Pvt_Ekf::run_Ekf(rtk_t *rtk, const obsd_t *obs, int n, const nav_t *nav)
                     // static const arma::mat I_44 = arma::eye(4, 4);
                     // P_all_ecef.submat(0, 0, 3, 3) += epsilon_m * I_44;
                     // P_all_ecef.submat(4, 4, 7, 7) += epsilon_ms * I_44;
+
 #ifndef EKF_ECEF
+                    // Update clock parts
+                    // d_P_new_new.at(3, 3) = P_all_ecef.at(3, 3);
+                    // d_P_new_new.at(7, 7) = P_all_ecef.at(7, 7);
+                    // arma::vec cov_rv_dt_ecef = arma::join_vert(d_P_new_new.submat(0, 3, 2, 3), d_P_new_new.submat(4, 3, 6, 3));
+                    // arma::vec cov_rv_dtv_ecef = arma::join_vert(d_P_new_new.submat(0, 7, 2, 7), d_P_new_new.submat(4, 7, 6, 7));
+                    // arma::vec cov_rv_dt_i = o_6;
+                    // arma::vec cov_rv_dtv_i = o_6;
+                    // conv_states_ecef2i(cov_rv_dt_ecef, cov_rv_dt_i);
+                    // conv_states_ecef2i(cov_rv_dtv_ecef, cov_rv_dtv_i);
+                    // d_P_new_new.submat(0, 3, 2, 3) = cov_rv_dt_i.subvec(0, 2);
+                    // d_P_new_new.submat(4, 3, 6, 3) = cov_rv_dt_i.subvec(3, 5);
+                    // d_P_new_new.submat(3, 0, 3, 2) = cov_rv_dt_i.subvec(0, 2);
+                    // d_P_new_new.submat(3, 4, 3, 6) = cov_rv_dt_i.subvec(3, 5);
+                    // d_P_new_new.submat(0, 7, 2, 7) = cov_rv_dtv_i.subvec(0, 2);
+                    // d_P_new_new.submat(4, 7, 6, 7) = cov_rv_dtv_i.subvec(3, 5);
+                    // d_P_new_new.submat(7, 0, 7, 2) = cov_rv_dtv_i.subvec(0, 2);
+                    // d_P_new_new.submat(7, 4, 7, 6) = cov_rv_dtv_i.subvec(3, 5);
+
                     // Convert P from ECEF to I, and substitute.
                     P_ecef(row_0_2, col_0_2) = P_all_ecef(row_0_2, col_0_2);
                     P_ecef(row_3_5, col_3_5) = P_all_ecef(col_4_6, col_4_6);
                     P_ecef(row_0_2, col_3_5) = P_all_ecef(row_0_2, col_4_6);
                     P_ecef(row_3_5, col_0_2) = P_all_ecef(col_4_6, col_0_2);
                     conv_state_matrix_ecef2i(P_ecef, P_i);
+                    // Update position and velocity parts
                     d_P_new_new(row_0_2, col_0_2) = P_i(row_0_2, col_0_2);
                     d_P_new_new(row_4_6, row_4_6) = P_i(col_3_5, col_3_5);
                     d_P_new_new(row_0_2, row_4_6) = P_i(row_0_2, col_3_5);
@@ -234,13 +263,18 @@ int Pvt_Ekf::run_Ekf(rtk_t *rtk, const obsd_t *obs, int n, const nav_t *nav)
                     // TODO: residual check and revert x P.
 
                     // Dynamic noise scaling
-                    static const double alpha = 0.3;
-                    arma::mat Q_p = alpha * d_Q + (1 - alpha) * K * res * (K * res).t();
-                    arma::mat P_p = d_F * d_P_old_old * d_F.t() + Q_p;
-                    arma::mat P = d_F * d_P_old_old * d_F.t() + d_Q;
-                    const double beta = arma::trace(H * P_p * H.t()) / arma::trace(H * P * H.t());
-                    d_Q = sqrt(beta) * d_Q;
-                    DLOG(INFO) << "Q: " << d_Q;
+                    // static const double alpha = 0.3;
+                    // arma::mat Q_p = alpha * d_Q + (1 - alpha) * K * res * (K * res).t();
+                    // arma::mat P_p = d_F * d_P_old_old * d_F.t() + Q_p;
+                    // arma::mat P = d_F * d_P_old_old * d_F.t() + d_Q;
+                    // const double beta = arma::trace(H * P_p * H.t()) / arma::trace(H * P * H.t());
+                    // assert(beta > 0);
+                    // const double q_dt = d_Q.at(3, 3);
+                    // const double q_dtv = d_Q.at(7, 7);
+                    // d_Q = sqrt(beta) * d_Q;
+                    // d_Q.at(3, 3) = q_dt;
+                    // d_Q.at(7, 7) = q_dtv;
+                    // DLOG(INFO) << "Q: " << d_Q;
 #else
                     // Without measurement updates
                     d_x_new_new = d_x_new_old;
@@ -354,15 +388,16 @@ arma::vec Pvt_Ekf::state_derivative(const arma::vec& x, const double tt) const
 {
     static arma::vec o_8 = arma::zeros(8, 1);
     arma::vec dx_dt = o_8;
-    dx_dt.subvec(0, 3) = x.subvec(4, 7);
+    // dx_dt.subvec(0, 3) = x.subvec(4, 7);
     // Because the drift accuracy may be bad, ignore the clock part.
-    // dx_dt.subvec(0, 2) = x.subvec(4, 6);
+    dx_dt.subvec(0, 2) = x.subvec(4, 6);
 
     double acc_m_s2[3] = {0};
     double pos_i[3];
     for (uint8_t i = 0; i < 3; i++)
         pos_i[i] = x.at(i);
 
+    // FIXME: in ECEF, coriolis force should be considered.
     switch (d_state_frame_type)
         {
         case ECI:
@@ -392,12 +427,12 @@ arma::mat Pvt_Ekf::JacobiMatrix(const arma::vec& x, const double tt) const
 {
     static arma::mat O_88 = arma::zeros(8, 8);
     // Because the drift accuracy may be bad, ignore the clock part.
-    static arma::mat I_44 = arma::eye(4, 4);
-    // static arma::mat I_33 = arma::eye(3, 3);
+    // static arma::mat I_44 = arma::eye(4, 4);
+    static arma::mat I_33 = arma::eye(3, 3);
     arma::mat F = O_88;
     // (r dt, v dtv)
-    F.submat(0, 4, 3, 7) = I_44;
-    // F.submat(0, 4, 2, 6) = I_33;
+    // F.submat(0, 4, 3, 7) = I_44;
+    F.submat(0, 4, 2, 6) = I_33;
     // (v, r)
     const double r = arma::norm(x.subvec(0, 2));
     const double r3 = pow(r, 3);

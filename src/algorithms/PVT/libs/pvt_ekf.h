@@ -54,7 +54,9 @@ public:
         double measures_pos_sd_m,
         double measures_vel_sd_ms,
         double system_pos_sd_m,
-        double system_vel_sd_ms);
+        double system_vel_sd_ms,
+        double system_clock_offset_sd_m,
+        double system_clock_drift_sd_ms);
     bool is_initialized() const;
     int run_Ekf(rtk_t *rtk, const obsd_t *obs, int n, const nav_t *nav);
     void get_states_Kf(arma::vec& x_ecef) const;

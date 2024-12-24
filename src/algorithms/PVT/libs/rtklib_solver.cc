@@ -1518,7 +1518,7 @@ bool Rtklib_Solver::get_PVT(const std::map<int, Gnss_Synchro> &gnss_observables_
                         {
                             result = rtkpos(&d_rtk, d_obs_data.data(), valid_obs + glo_valid_obs, &d_nav_data);
                             // if ()
-                            const double clock_bias_m = (d_rtk.sol.stat == SOLQ_SINGLE) ? d_rtk.sol.dtr[0] * SPEED_OF_LIGHT_M_S : d_rtk.sol.dtr[0];
+                            const double clock_bias_m = (d_rtk.opt.mode == PMODE_SINGLE) ? d_rtk.sol.dtr[0] * SPEED_OF_LIGHT_M_S : d_rtk.sol.dtr[0];
                             if (result != 0 && fabs(clock_bias_m / SPEED_OF_LIGHT_M_S) < kf_update_interval_s)  // FIXME: temporary to get corrected clock offset.
                                 {
                                     // const double clock_bias_m = (d_rtk.sol.stat == SOLQ_SINGLE) ? d_rtk.sol.dtr[0] * SPEED_OF_LIGHT_M_S : d_rtk.sol.dtr[0];
@@ -1533,7 +1533,9 @@ bool Rtklib_Solver::get_PVT(const std::map<int, Gnss_Synchro> &gnss_observables_
                                         d_conf.measures_ecef_pos_sd_m,
                                         d_conf.measures_ecef_vel_sd_ms,
                                         d_conf.system_ecef_pos_sd_m,
-                                        d_conf.system_ecef_vel_sd_ms);
+                                        d_conf.system_ecef_vel_sd_ms,
+                                        d_conf.system_clock_offset_sd_m,
+                                        d_conf.system_clock_drift_sd_ms);
                                 }
                         }
                     else
