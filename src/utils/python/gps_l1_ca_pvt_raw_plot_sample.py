@@ -32,6 +32,7 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import pyproj
 import utm
 from lib.gps_l1_ca_read_pvt_dump import gps_l1_ca_read_pvt_dump
@@ -51,14 +52,13 @@ path = '/home/junichiro/work/gnss_sim_receiver/test/'
 pvt_raw_log_path = path + 'pvt.dat'
 nav_sol_period_ms = 100
 plot_skyplot = 0
-user_position_file_path = path + 'log/20241216173110_ch1.txt'
-visibility_file_path = path + "log/20241216173110_visibility_ch1.txt"
+user_position_file_path = path + 'log/20241224125259_ch2.txt'
+visibility_file_path = path + "log/20241228142354_visibility_ch2.txt"
 dynamic = True
 
 settings['navSolPeriod'] = nav_sol_period_ms
 
 navSolutions = gps_l1_ca_read_pvt_dump(pvt_raw_log_path)
-# FIXME: add csv generator from pvt dump to generate plot.
 if dynamic:
     true_position = get_interpolated_positions(user_position_file_path,
                                                np.array(navSolutions['RxTime']) - np.array(navSolutions['dt']))
@@ -112,6 +112,14 @@ U_UTM = utm_position[2]
 navSolutions['E_UTM'] = np.array(E_UTM)
 navSolutions['N_UTM'] = np.array(N_UTM)
 navSolutions['U_UTM'] = np.array(U_UTM)
+
+# save to csv file
+position_label = ['X_ECEF', 'Y_ECEF', 'Z_ECEF', 'E_UTM', 'N_UTM', 'U_UTM']
+for label in position_label:
+  navSolutions['error_' + label] = navSolutions[label] - settings['true_position'][label]
+df = pd.DataFrame.from_dict(navSolutions)
+csv_file_name = path + "pvt.csv"
+df.to_csv(csv_file_name)
 
 plotNavigation(navSolutions, settings, path, 'UTM', plot_skyplot, dynamic)
 plotNavigation(navSolutions, settings, path, 'ECEF', plot_skyplot, dynamic)
