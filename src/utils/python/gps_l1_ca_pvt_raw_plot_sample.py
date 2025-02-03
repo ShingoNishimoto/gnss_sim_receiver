@@ -46,15 +46,15 @@ settings = {}
 # ---------- CHANGE HERE:
 # samplingFreq = 3e6
 # channels = 8
-# path = '/home/junichiro/Desktop/'
-path = '/home/junichiro/work/gnss_sim_receiver/test/'
+path = '/home/junichiro/Desktop/'
+# path = '/home/junichiro/work/gnss_sim_receiver/test/'
 # path = '/home/junichiro/work/gnss_sim_receiver/test/cislunar/'
 pvt_raw_log_path = path + 'pvt.dat'
 nav_sol_period_ms = 100
 plot_skyplot = 0
-user_position_file_path = path + 'log/20241224125259_ch2.txt'
-visibility_file_path = path + "log/20241228142354_visibility_ch2.txt"
-dynamic = True
+user_position_file_path = path + 'log/20250122154235_ch2.txt'
+visibility_file_path = path + "log/20250105140346_visibility_ch1.txt"
+dynamic = False
 
 settings['navSolPeriod'] = nav_sol_period_ms
 
@@ -88,10 +88,11 @@ if dynamic:
 settings['true_position'] = {
                             # 'E_UTM':np.nan,'N_UTM':np.nan,'U_UTM':np.nan, 'X_ECEF':-4474292, 'Y_ECEF':2675793, 'Z_ECEF':-3663100} # Birch building -35.274508, 149.119008, 568
                             # 'E_UTM':500000,'N_UTM':3873043.06,'U_UTM':0, 'X_ECEF':-3698470, 'Y_ECEF':3698470, 'Z_ECEF':3637867} # 35, 135, 0
-                            # 'E_UTM':500000,'N_UTM':0.0,'U_UTM':0, 'X_ECEF':-4510024, 'Y_ECEF':4510024, 'Z_ECEF':0.0} # 0, 135, 0
+                            # 'E_UTM':500000,'N_UTM':0.0,'U_UTM':0, 'X_ECEF':-4510024, 'Y_ECEF':4510024, 'Z_ECEF':0.0, 'lat': np.deg2rad(0), 'lon': np.deg2rad(135)} # 0, 135, 0
                             # 'E_UTM':690940.77,'N_UTM':6091664.70,'U_UTM':578.0, 'X_ECEF':-4472009, 'Y_ECEF':2676442, 'Z_ECEF':-3665415} # -35.3, 149.1, 578.0 (ANU)
-                            # 'E_UTM':500000,'N_UTM':0,'U_UTM':4e8, 'X_ECEF':-287352736.0, 'Y_ECEF':287352736.0, 'Z_ECEF':0.0} # 0, 135, 4e8
-                            'E_UTM': true_position[3],'N_UTM': true_position[4],'U_UTM': true_position[5], 'X_ECEF': true_position[0], 'Y_ECEF': true_position[1], 'Z_ECEF': true_position[2]} # dynamic, LEO
+                            'E_UTM':500000,'N_UTM':0,'U_UTM':4e8, 'X_ECEF':-287352736.0, 'Y_ECEF':287352736.0, 'Z_ECEF':0.0, 'lat': np.deg2rad(0), 'lon': np.deg2rad(135)} # 0, 135, 4e8
+                            # 'E_UTM':500000,'N_UTM':0,'U_UTM':3e8, 'X_ECEF':-216642058.0, 'Y_ECEF':216642058.0, 'Z_ECEF':0.0, 'lat': np.deg2rad(0), 'lon': np.deg2rad(135)} # 0, 135, 3e8
+                            # 'E_UTM': true_position[3],'N_UTM': true_position[4],'U_UTM': true_position[5], 'X_ECEF': true_position[0], 'Y_ECEF': true_position[1], 'Z_ECEF': true_position[2], 'lat': true_position[6], 'lon': true_position[7]} # dynamic, LEO
 
 # NOTE: this is in ECEF
 X, Y, Z = navSolutions['X'], navSolutions['Y'], navSolutions['Z']
@@ -113,17 +114,37 @@ navSolutions['E_UTM'] = np.array(E_UTM)
 navSolutions['N_UTM'] = np.array(N_UTM)
 navSolutions['U_UTM'] = np.array(U_UTM)
 
+zero = np.zeros_like(settings['true_position']['lon']) if dynamic else 0
+ECEF2ENU = np.array([np.array([-np.sin(settings['true_position']['lon']), np.cos(settings['true_position']['lon']), zero]),
+                     np.array([-np.sin(settings['true_position']['lat']) * np.cos(settings['true_position']['lon']), -np.sin(settings['true_position']['lat']) * np.sin(settings['true_position']['lon']), np.cos(settings['true_position']['lat'])]),
+                     np.array([ np.cos(settings['true_position']['lat']) * np.cos(settings['true_position']['lon']),  np.cos(settings['true_position']['lat']) * np.sin(settings['true_position']['lon']), np.sin(settings['true_position']['lat'])])])
+
 # save to csv file
 position_label = ['X_ECEF', 'Y_ECEF', 'Z_ECEF', 'E_UTM', 'N_UTM', 'U_UTM']
 for label in position_label:
   navSolutions['error_' + label] = navSolutions[label] - settings['true_position'][label]
+# Compute ENU error
+enu_errors = []
+for i in range(len(navSolutions[position_label[0]])):
+  ecef_error = np.array([navSolutions['error_X_ECEF'][i], navSolutions['error_Y_ECEF'][i], navSolutions['error_Z_ECEF'][i]])
+  if dynamic:
+    enu_errors.append(ECEF2ENU.T[i].T @ ecef_error)
+  else:
+    enu_errors.append(ECEF2ENU @ ecef_error)
+enu_errors_array = np.array(enu_errors).T
+enu_label = ['E_ENU', 'N_ENU', 'U_ENU']
+for i in range(len(enu_label)):
+  navSolutions[enu_label[i]] = enu_errors_array[i]
+
 df = pd.DataFrame.from_dict(navSolutions)
 csv_file_name = path + "pvt.csv"
 df.to_csv(csv_file_name)
+excel_file_name = path + "pvt.xlsx"
+df.to_excel(excel_file_name)
 
 plotNavigation(navSolutions, settings, path, 'UTM', plot_skyplot, dynamic)
 plotNavigation(navSolutions, settings, path, 'ECEF', plot_skyplot, dynamic)
-plotVisibility(visibility_file_path, path)
+# plotVisibility(visibility_file_path, path)
 
 # OPTIONAL: Other plots ->
 if not dynamic:

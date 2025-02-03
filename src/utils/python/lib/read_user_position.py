@@ -106,6 +106,7 @@ def ecef_to_utm(ecef_pos: np.array) -> np.array:
     # ecef_to_lla = pyproj.Transformer.from_crs(wgs84.crs, lon_lat_proj.crs)
     ecef_to_lla = pyproj.Transformer.from_crs("EPSG:4978", "EPSG:4326", always_xy=True)
     lon, lat, alt = ecef_to_lla.transform(x_ecef, y_ecef, z_ecef)
+    lat_lon = np.array([lat, lon])
 
     # Define the output UTM projection
     # zone = utm.latlon_to_zone_number(lat, lon)
@@ -131,4 +132,4 @@ def ecef_to_utm(ecef_pos: np.array) -> np.array:
     # easting, northing, alt = ecef_to_utm.transform(x_ecef, y_ecef, z_ecef)
 
     # return np.array([easting, northing, alt])
-    return utm_pos.T
+    return np.vstack([utm_pos.T, lat_lon])
