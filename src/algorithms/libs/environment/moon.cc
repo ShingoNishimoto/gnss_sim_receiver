@@ -82,6 +82,7 @@ void Moon::InitOrbitElement(double et_J2000, double r_ini[3], double v_ini[3])
     if (!normv3(r_ini, r_dir))
         {
             std::cerr << "Something wrong!" << std::endl;
+            return;
         }
     periapsis_vector_[0] -= mu_center_of_mass_ * r_dir[0];
     periapsis_vector_[1] -= mu_center_of_mass_ * r_dir[1];
