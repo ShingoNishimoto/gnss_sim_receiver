@@ -129,7 +129,7 @@ def plot_position(navSolutions, path):
     ax.set_title('Positions latitud-longitud')
     ax.set_xlabel('Latitude º')
     ax.set_ylabel('Longitude º')
-    ax.set_aspect('equal')
+    ax.set_aspect('auto')
     plt.axis('tight')
 
     # Colors
@@ -149,7 +149,7 @@ def plot_position(navSolutions, path):
     ax.set_ylabel('Eje Y [m]')
     ax.set_zlabel('Eje Z [m]')
     ax.set_title('Positions x-y-z')
-    ax.set_aspect('equal')
+    ax.set_aspect('auto')
 
     plt.tight_layout()
     plt.savefig(os.path.join(fig_path, f'PVT_ProcessDataResults.png'))
