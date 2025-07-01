@@ -712,6 +712,12 @@ void Rtklib_Solver::update_has_corrections(const std::map<int, Gnss_Synchro> &ob
 }
 
 
+uint8_t Rtklib_Solver::get_sol_stat() const
+{
+    return d_rtk.sol.stat;
+}
+
+
 void Rtklib_Solver::check_has_orbit_clock_validity(const std::map<int, Gnss_Synchro> &obs_map)
 {
     for (const auto &it : obs_map)

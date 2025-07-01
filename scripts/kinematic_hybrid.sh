@@ -14,6 +14,7 @@ fi
 ###
 date_str="`date +'%Y%m%d%H%M%S'`"
 mkdir $date_str
+
 # set parameters manually.
 bladerfargs="-t 2024/01/15,02:20:00 -e $confpath/../src/bladeGPS/brdc0150.24n -d 4800 -l 0.0,135.0,0.0 -U ../src/bladeGPS/LLO_1_3_last.csv -s ./$date_str/ -a 5 -r 0,90 -R 0,-90 -p -E -I"
 
@@ -36,4 +37,9 @@ cat gnss_sim_receiver.INFO | grep "dt0_current" > dt0_current.txt && sed -i 's/.
 cat gnss_sim_receiver.INFO | grep "dt_0" > dt0.txt && sed -i 's/.*\[s\]: //g' dt0.txt
 cat gnss_sim_receiver.INFO | grep "dt_GNSSR-AOWR \[s\]" > dt_gnssr_aowr.txt && sed -i 's/.*\[s\]: //g' dt_gnssr_aowr.txt
 cat gnss_sim_receiver.INFO | grep "dt_GNSSR-AOWR CP \[s\]" > dt_gnssr_aowr_cp.txt && sed -i 's/.*\[s\]: //g' dt_gnssr_aowr_cp.txt
+
+merge_script=$confpath"/../scripts/merge_txt_to_csv.sh"
+bash $merge_script
+plot_script=$confpath"/../scripts/python/plot_non_pvt_log.py"
+python3 $plot_script
 popd

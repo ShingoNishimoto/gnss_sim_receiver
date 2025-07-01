@@ -100,6 +100,7 @@ public:
     Monitor_Pvt get_monitor_pvt() const;
     void store_has_data(const Galileo_HAS_data& new_has_data);
     void update_has_corrections(const std::map<int, Gnss_Synchro>& obs_map);
+    uint8_t get_sol_stat() const;
 
     sol_t pvt_sol{};
     std::array<ssat_t, MAXSAT> pvt_ssat{};

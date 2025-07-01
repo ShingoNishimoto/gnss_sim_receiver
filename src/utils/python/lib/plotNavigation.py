@@ -36,6 +36,7 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
+from mpl_toolkits.mplot3d import Axes3D
 
 
 def plotNavigation(navSolutions, settings, path, coord='UTM', plot_skyplot=0, dynamic=False):

@@ -46,15 +46,22 @@ settings = {}
 # ---------- CHANGE HERE:
 # samplingFreq = 3e6
 # channels = 8
-path = '/home/junichiro/Desktop/'
-# path = '/home/junichiro/work/gnss_sim_receiver/test/'
-# path = '/home/junichiro/work/gnss_sim_receiver/test/cislunar/'
+# path = '/home/junichiro/Desktop/'
+is_GS = False
+dynamic = False
+if is_GS:
+  path = '/home/junichiro/work/gnss_sim_receiver/test/20250602181105/'
+  log_suffix = "_ch1.txt"
+else:
+  path = '/home/junichiro/Desktop/'
+  # path = '/home/junichiro/work/gnss_sim_receiver/test/cislunar/'
+  log_suffix = "_ch2.txt"
+
 pvt_raw_log_path = path + 'pvt.dat'
 nav_sol_period_ms = 100
 plot_skyplot = 0
-user_position_file_path = path + 'log/20250122154235_ch2.txt'
-visibility_file_path = path + "log/20250105140346_visibility_ch1.txt"
-dynamic = False
+user_position_file_path = path + "log/user_pos" + log_suffix
+visibility_file_path = path + "log/visibility" + log_suffix
 
 settings['navSolPeriod'] = nav_sol_period_ms
 
@@ -85,14 +92,22 @@ if dynamic:
     plt.tight_layout()
     plt.show()
 
-settings['true_position'] = {
-                            # 'E_UTM':np.nan,'N_UTM':np.nan,'U_UTM':np.nan, 'X_ECEF':-4474292, 'Y_ECEF':2675793, 'Z_ECEF':-3663100} # Birch building -35.274508, 149.119008, 568
-                            # 'E_UTM':500000,'N_UTM':3873043.06,'U_UTM':0, 'X_ECEF':-3698470, 'Y_ECEF':3698470, 'Z_ECEF':3637867} # 35, 135, 0
-                            # 'E_UTM':500000,'N_UTM':0.0,'U_UTM':0, 'X_ECEF':-4510024, 'Y_ECEF':4510024, 'Z_ECEF':0.0, 'lat': np.deg2rad(0), 'lon': np.deg2rad(135)} # 0, 135, 0
-                            # 'E_UTM':690940.77,'N_UTM':6091664.70,'U_UTM':578.0, 'X_ECEF':-4472009, 'Y_ECEF':2676442, 'Z_ECEF':-3665415} # -35.3, 149.1, 578.0 (ANU)
-                            'E_UTM':500000,'N_UTM':0,'U_UTM':4e8, 'X_ECEF':-287352736.0, 'Y_ECEF':287352736.0, 'Z_ECEF':0.0, 'lat': np.deg2rad(0), 'lon': np.deg2rad(135)} # 0, 135, 4e8
-                            # 'E_UTM':500000,'N_UTM':0,'U_UTM':3e8, 'X_ECEF':-216642058.0, 'Y_ECEF':216642058.0, 'Z_ECEF':0.0, 'lat': np.deg2rad(0), 'lon': np.deg2rad(135)} # 0, 135, 3e8
-                            # 'E_UTM': true_position[3],'N_UTM': true_position[4],'U_UTM': true_position[5], 'X_ECEF': true_position[0], 'Y_ECEF': true_position[1], 'Z_ECEF': true_position[2], 'lat': true_position[6], 'lon': true_position[7]} # dynamic, LEO
+if is_GS:
+  settings['true_position'] = {
+    'E_UTM':500000,'N_UTM':0.0,'U_UTM':0, 'X_ECEF':-4510024, 'Y_ECEF':4510024, 'Z_ECEF':0.0, 'lat': np.deg2rad(0), 'lon': np.deg2rad(135) # 0, 135, 0
+    # 'E_UTM':690940.77,'N_UTM':6091664.70,'U_UTM':578.0, 'X_ECEF':-4472009, 'Y_ECEF':2676442, 'Z_ECEF':-3665415} # -35.3, 149.1, 578.0 (ANU)
+    # 'E_UTM':500000,'N_UTM':3873043.06,'U_UTM':0, 'X_ECEF':-3698470, 'Y_ECEF':3698470, 'Z_ECEF':3637867} # 35, 135, 0
+  }
+else:
+  if dynamic:
+    settings['true_position'] = {
+      'E_UTM': true_position[3],'N_UTM': true_position[4],'U_UTM': true_position[5], 'X_ECEF': true_position[0], 'Y_ECEF': true_position[1], 'Z_ECEF': true_position[2], 'lat': true_position[6], 'lon': true_position[7] # dynamic, LEO
+    }
+  else:
+    settings['true_position'] = {
+      'E_UTM':500000,'N_UTM':0,'U_UTM':4e8, 'X_ECEF':-287352736.0, 'Y_ECEF':287352736.0, 'Z_ECEF':0.0, 'lat': np.deg2rad(0), 'lon': np.deg2rad(135) # 0, 135, 4e8
+      # 'E_UTM':500000,'N_UTM':0,'U_UTM':1e8, 'X_ECEF':-75220702.0, 'Y_ECEF':75220702.0, 'Z_ECEF':0.0, 'lat': np.deg2rad(0), 'lon': np.deg2rad(135)} # 0, 135, 1e8
+    }
 
 # NOTE: this is in ECEF
 X, Y, Z = navSolutions['X'], navSolutions['Y'], navSolutions['Z']

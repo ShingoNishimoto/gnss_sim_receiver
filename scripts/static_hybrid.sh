@@ -12,11 +12,12 @@ if [ ! -f $conffile ]; then
 fi
 
 ###
-# set parameters manually.
-bladerfargs="-t 2024/01/15,00:00:00 -e $confpath/../src/bladeGPS/brdc0150.24n -d 3000 -l 0.0,135.0,0.0 -L 0.0,135.0,400000000.0 -s ./log/ -a 5 -r 0,90 -R 0,-90 -p -E -I -v"
-
+# Lod directory
 date_str="`date +'%Y%m%d%H%M%S'`"
 mkdir $date_str
+
+# set parameters manually.
+bladerfargs="-t 2024/01/15,01:00:00 -e $confpath/../src/bladeGPS/brdc0150.24n -d 3000 -l 0.0,135.0,0.0 -L 0.0,135.0,400000000.0 -s ./$date_str/ -a -20 -r 0,90 -R 0,-90 -p -E -I -v"
 
 ###
 # run
@@ -37,4 +38,9 @@ cat gnss_sim_receiver.INFO | grep "dt0_current" > dt0_current.txt && sed -i 's/.
 cat gnss_sim_receiver.INFO | grep "dt_0" > dt0.txt && sed -i 's/.*\[s\]: //g' dt0.txt
 cat gnss_sim_receiver.INFO | grep "dt_GNSSR-AOWR \[s\]" > dt_gnssr_aowr.txt && sed -i 's/.*\[s\]: //g' dt_gnssr_aowr.txt
 cat gnss_sim_receiver.INFO | grep "dt_GNSSR-AOWR CP \[s\]" > dt_gnssr_aowr_cp.txt && sed -i 's/.*\[s\]: //g' dt_gnssr_aowr_cp.txt
+
+merge_script=$confpath"/../scripts/merge_txt_to_csv.sh"
+bash $merge_script
+plot_script=$confpath"/../scripts/python/plot_non_pvt_log.py"
+python3 $plot_script
 popd
