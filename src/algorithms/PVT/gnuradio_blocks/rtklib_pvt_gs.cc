@@ -2342,10 +2342,14 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                     // Carrier-phase synch.
                     static const double R_ps_true = 0.4;  // FIXME: this value is temporary. Should be set from config.
                     static double dt0_fraction_sum = 0.0;
+                    static double initial_rx_time = 0.0;
                     if (itr != d_gnss_observables_map.end())
                         {
                             auto pseudo_sat_observable = std::move(itr->second);
-                            double dt_current = pseudo_sat_observable.Pseudorange_m / SPEED_OF_LIGHT_M_S;
+                            if (initial_rx_time == 0.0)
+                                initial_rx_time = pseudo_sat_observable.RX_time;
+                            double dt_current = pseudo_sat_observable.RX_time - pseudo_sat_observable.interp_TOW_ms / 1000.0;
+                            // double dt_current = pseudo_sat_observable.Pseudorange_m / SPEED_OF_LIGHT_M_S;
                             // NOTE: to avoid round error for averaging, store the integer values here.
                             static int64_t dt_int_s = static_cast<int64_t>(std::round(dt_current));
                             const auto ps_freq_map = SIGNAL_FREQ_MAP.find(std::string(pseudo_sat_observable.Signal, 2));
@@ -2366,9 +2370,10 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                             static double dt_new = 0.0;
                             if (dt_gnssr_aowr_s != 0 && (fabs(dt_current - dt_gnssr_aowr_s) > dt_dev_thresh
                                 || fabs(dt0_current - dt0) > dt_dev_thresh
-                                || fabs(dt0 + Ci - dt_gnssr_aowr_s_by_cp) > dt_cp_dev_thresh))
+                                || fabs(dt0 + Ci - dt_gnssr_aowr_s_by_cp) > dt_cp_dev_thresh
+                                || (pseudo_sat_observable.RX_time - initial_rx_time) > 40))
                                 {
-                                    LOG(INFO) << "PS's PR was deviated! Diff: " << std::fixed << std::setprecision(10) << dt_current - dt_gnssr_aowr_s;
+                                    LOG(INFO) << "PS's PR was deviated! dt Diff: " << std::fixed << std::setprecision(10) << dt_current - dt_gnssr_aowr_s << ", dt0 diff: " << dt0_current - dt0;
                                     dev_count++;
                                     // Check whether it's deviation or jump of observation.
                                     dt_new_fraction_total += dt_current - dt_int_s;
@@ -2382,17 +2387,18 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                                 }
                             else
                                 {
-                                    LOG(INFO) << "dt_current: " << std::fixed << std::setprecision(10) << dt_current;
-                                    LOG(INFO) << "dt0_current: " << std::fixed << std::setprecision(10) << dt0_current;
+                                    const int float_num = 12;
+                                    LOG(INFO) << "dt_current: " << std::fixed << std::setprecision(float_num) << dt_current;
+                                    LOG(INFO) << "dt0_current: " << std::fixed << std::setprecision(float_num) << dt0_current;
                                     dev_count = 0;
                                     dt_fraction_total += dt_current - dt_int_s;
                                     ps_observe_count++;
                                     dt_gnssr_aowr_s = dt_int_s + dt_fraction_total / ps_observe_count;
-                                    LOG(INFO) << "dt_GNSSR-AOWR [s]: " << std::fixed << std::setprecision(10) << dt_gnssr_aowr_s;
+                                    LOG(INFO) << "dt_GNSSR-AOWR [s]: " << std::fixed << std::setprecision(float_num) << dt_gnssr_aowr_s;
                                     // Carrier-phase synch.
                                     dt0_fraction_sum += dt0_current - dt_int_s;
                                     dt0 = dt_int_s + dt0_fraction_sum / ps_observe_count;
-                                    LOG(INFO) << "dt_0 [s]: " << std::fixed << std::setprecision(10) << dt0;
+                                    LOG(INFO) << "dt_0 [s]: " << std::fixed << std::setprecision(float_num) << dt0;
                                     if (dt_gnssr_aowr_s_by_cp != 0)
                                         {
                                             diff_total += fabs(dt0 + Ci - dt_gnssr_aowr_s_by_cp);
@@ -2400,7 +2406,7 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                                             LOG(INFO) << "dt CP thresh: " << dt_cp_dev_thresh;
                                         }
                                     dt_gnssr_aowr_s_by_cp = dt0 + Ci;
-                                    LOG(INFO) << "dt_GNSSR-AOWR CP [s]: " << std::fixed << std::setprecision(10) << dt_gnssr_aowr_s_by_cp;
+                                    LOG(INFO) << "dt_GNSSR-AOWR CP [s]: " << std::fixed << std::setprecision(float_num) << dt_gnssr_aowr_s_by_cp;
                                 }
 
                             const uint16_t dev_count_thresh = 100;
@@ -2767,7 +2773,7 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                                             }
                                             write_rx_clock_bias(Rx_clock_offset_s, tag_tow_s_at_ch0, this->d_gnss_observables_map.begin()->second.PRN);
                                         }
-                                    if (d_hybrid_mode && (d_ps_channel != -1) && flag_ps_observed)
+                                    if (d_hybrid_mode && (d_ps_channel != -1) && flag_ps_observed && (d_user_pvt_solver->get_sol_stat() == SOLQ_PPP))
                                         {
                                             // TODO: set output rate
                                             double clock_diff_s = -dt_gnssr_aowr_s_by_cp + Rx_clock_offset_s;
