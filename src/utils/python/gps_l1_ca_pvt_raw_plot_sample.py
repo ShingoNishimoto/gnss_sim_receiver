@@ -39,18 +39,21 @@ from lib.gps_l1_ca_read_pvt_dump import gps_l1_ca_read_pvt_dump
 from lib.plotNavigation import plotNavigation
 from lib.plotPosition import plot_oneVStime, plot_position
 from lib.plotVisibility import plotVisibility
-from lib.read_user_position import ecef_to_utm, get_interpolated_positions
+from lib.read_user_position import (batch_eci_to_rtn_full, ecef_to_eci_simple,
+                                    ecef_to_utm, get_interpolated_positions,
+                                    gps_to_gmst)
 
 settings = {}
 
 # ---------- CHANGE HERE:
 # samplingFreq = 3e6
 # channels = 8
-# path = '/home/junichiro/Desktop/'
 is_GS = False
-dynamic = False
+dynamic = True
+gs_log_path = '/home/junichiro/work/gnss_sim_receiver/test/20250720165646/'
+# gs_log_path = '/home/junichiro/Desktop/'
 if is_GS:
-  path = '/home/junichiro/work/gnss_sim_receiver/test/20250602181105/'
+  path = gs_log_path
   log_suffix = "_ch1.txt"
 else:
   path = '/home/junichiro/Desktop/'
@@ -58,17 +61,23 @@ else:
   log_suffix = "_ch2.txt"
 
 pvt_raw_log_path = path + 'pvt.dat'
-nav_sol_period_ms = 100
+nav_sol_period_ms = 1000
 plot_skyplot = 0
-user_position_file_path = path + "log/user_pos" + log_suffix
-visibility_file_path = path + "log/visibility" + log_suffix
+user_states_file_path = gs_log_path + "user_states" + log_suffix
+# NOTE: this is important only when dynamic mode
+user_states_eci_file_path = gs_log_path + "user_states_eci" + log_suffix
+visibility_file_path = gs_log_path + "visibility" + log_suffix
 
 settings['navSolPeriod'] = nav_sol_period_ms
 
 navSolutions = gps_l1_ca_read_pvt_dump(pvt_raw_log_path)
 if dynamic:
-    true_position = get_interpolated_positions(user_position_file_path,
+    true_position = get_interpolated_positions(user_states_file_path,
                                                np.array(navSolutions['RxTime']) - np.array(navSolutions['dt']))
+    true_position_inertial = get_interpolated_positions(user_states_eci_file_path,
+                                               np.array(navSolutions['RxTime']) - np.array(navSolutions['dt']),
+                                               True)
+
     # For debug
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 10), sharex=True)
 
@@ -92,6 +101,18 @@ if dynamic:
     plt.tight_layout()
     plt.show()
 
+rotating_states_label = [
+  'X_ECEF', 'Y_ECEF', 'Z_ECEF',
+  'VX_ECEF', 'VY_ECEF', 'VZ_ECEF',
+  'E_UTM', 'N_UTM', 'U_UTM', 'lat', 'lon'
+]
+inertial_states_label = [
+  'X_ECI', 'Y_ECI', 'Z_ECI',
+  'VX_ECI', 'VY_ECI', 'VZ_ECI',
+  # 'R_RTN', 'T_RTN', 'N_RTN',
+  # 'VR_RTN', 'VT_RTN', 'VN_RTN',
+]
+
 if is_GS:
   settings['true_position'] = {
     'E_UTM':500000,'N_UTM':0.0,'U_UTM':0, 'X_ECEF':-4510024, 'Y_ECEF':4510024, 'Z_ECEF':0.0, 'lat': np.deg2rad(0), 'lon': np.deg2rad(135) # 0, 135, 0
@@ -100,9 +121,9 @@ if is_GS:
   }
 else:
   if dynamic:
-    settings['true_position'] = {
-      'E_UTM': true_position[3],'N_UTM': true_position[4],'U_UTM': true_position[5], 'X_ECEF': true_position[0], 'Y_ECEF': true_position[1], 'Z_ECEF': true_position[2], 'lat': true_position[6], 'lon': true_position[7] # dynamic, LEO
-    }
+    settings['true_position'] = { rotating_states_label[i]: true_position[i] for i in range(len(rotating_states_label)) }
+    for i in range(len(inertial_states_label)):
+      settings['true_position'][inertial_states_label[i]] = true_position_inertial[i]
   else:
     settings['true_position'] = {
       'E_UTM':500000,'N_UTM':0,'U_UTM':4e8, 'X_ECEF':-287352736.0, 'Y_ECEF':287352736.0, 'Z_ECEF':0.0, 'lat': np.deg2rad(0), 'lon': np.deg2rad(135) # 0, 135, 4e8
@@ -110,14 +131,25 @@ else:
     }
 
 # NOTE: this is in ECEF
-X, Y, Z = navSolutions['X'], navSolutions['Y'], navSolutions['Z']
-# copy
-navSolutions['X_ECEF'] = np.array(X)
-navSolutions['Y_ECEF'] = np.array(Y)
-navSolutions['Z_ECEF'] = np.array(Z)
+X, Y, Z, VX, VY, VZ = navSolutions['X'], navSolutions['Y'], navSolutions['Z'], navSolutions['X_vel'], navSolutions['Y_vel'], navSolutions['Z_vel']
 
 ecef_positions = np.array([X, Y, Z])
-utm_position = ecef_to_utm(ecef_positions)
+ecef_velocities = np.array([VX, VY, VZ])
+for i in range(3):
+  navSolutions[rotating_states_label[i]] = ecef_positions[i]
+  navSolutions[rotating_states_label[3 + i]] = ecef_velocities[i]
+
+if not dynamic:
+  ones_base = np.ones_like(X)
+  true_position = np.array([
+    settings['true_position']['X_ECEF'] * ones_base,
+    settings['true_position']['Y_ECEF'] * ones_base,
+    settings['true_position']['Z_ECEF'] * ones_base])
+  # Add velocity (0)
+  for i in range(3):
+    settings['true_position'][rotating_states_label[3 + i]] = 0
+
+utm_position = ecef_to_utm(ecef_positions, true_position[0:3])
 E_UTM = utm_position[0]
 N_UTM = utm_position[1]
 # To avoid the discontinuity in UTM result TODO: for dynamic data.
@@ -129,28 +161,74 @@ navSolutions['E_UTM'] = np.array(E_UTM)
 navSolutions['N_UTM'] = np.array(N_UTM)
 navSolutions['U_UTM'] = np.array(U_UTM)
 
+# ECEF to ENU
 zero = np.zeros_like(settings['true_position']['lon']) if dynamic else 0
 ECEF2ENU = np.array([np.array([-np.sin(settings['true_position']['lon']), np.cos(settings['true_position']['lon']), zero]),
                      np.array([-np.sin(settings['true_position']['lat']) * np.cos(settings['true_position']['lon']), -np.sin(settings['true_position']['lat']) * np.sin(settings['true_position']['lon']), np.cos(settings['true_position']['lat'])]),
                      np.array([ np.cos(settings['true_position']['lat']) * np.cos(settings['true_position']['lon']),  np.cos(settings['true_position']['lat']) * np.sin(settings['true_position']['lon']), np.sin(settings['true_position']['lat'])])])
 
-# save to csv file
-position_label = ['X_ECEF', 'Y_ECEF', 'Z_ECEF', 'E_UTM', 'N_UTM', 'U_UTM']
-for label in position_label:
-  navSolutions['error_' + label] = navSolutions[label] - settings['true_position'][label]
-# Compute ENU error
-enu_errors = []
-for i in range(len(navSolutions[position_label[0]])):
-  ecef_error = np.array([navSolutions['error_X_ECEF'][i], navSolutions['error_Y_ECEF'][i], navSolutions['error_Z_ECEF'][i]])
-  if dynamic:
-    enu_errors.append(ECEF2ENU.T[i].T @ ecef_error)
-  else:
-    enu_errors.append(ECEF2ENU @ ecef_error)
-enu_errors_array = np.array(enu_errors).T
-enu_label = ['E_ENU', 'N_ENU', 'U_ENU']
-for i in range(len(enu_label)):
-  navSolutions[enu_label[i]] = enu_errors_array[i]
+if dynamic:
+  # ECEF to ECI
+  user_states_eci = np.loadtxt(user_states_eci_file_path, delimiter=',', skiprows=1)
+  # sidereal_day = 86164.0905  # seconds
+  t0_gps = user_states_eci[0, 0]
+  t0_gmst = user_states_eci[0, 1]
+  t_offset = (gps_to_gmst(navSolutions['WEEK'][0], t0_gps) - t0_gmst) # in SI seconds
+  omega_earth = 7.2921150e-5
+  one_rev_periods = 2 * np.pi / omega_earth # Earth rotation period not one day.
+  t_gmst_solution = (gps_to_gmst(np.array(navSolutions['WEEK']), position_time) - t_offset) % one_rev_periods # in SI seconds
+  position_eci, velocity_eci = ecef_to_eci_simple(ecef_positions.T, ecef_velocities.T, t_gmst_solution)
+  for i in range(3):
+    navSolutions[inertial_states_label[i]] = position_eci.T[i]
+    navSolutions[inertial_states_label[3 + i]] = velocity_eci.T[i]
 
+  # ECI to RTN
+  position_rtn, velocity_rtn = batch_eci_to_rtn_full(
+    position_eci, velocity_eci,
+    true_position_inertial[0:3].T,
+    true_position_inertial[3:6].T
+    )
+  rtn_label = [
+    'R_RTN', 'T_RTN', 'N_RTN',
+    'VR_RTN', 'VT_RTN', 'VN_RTN',
+  ]
+  for i in range(3):
+    navSolutions[rtn_label[i]] = position_rtn.T[i]
+    navSolutions[rtn_label[3 + i]] = velocity_rtn.T[i]
+
+# Compute states error
+# ECEF
+for label in rotating_states_label[:-2]:
+  navSolutions['error_' + label] = navSolutions[label] - settings['true_position'][label]
+if dynamic:
+  # ECI
+  for label in inertial_states_label:
+    navSolutions['error_' + label] = navSolutions[label] - settings['true_position'][label]
+
+# Stack ECEF error vectors into shape (N, 3)
+ecef_errors = np.vstack([
+    navSolutions['error_X_ECEF'],
+    navSolutions['error_Y_ECEF'],
+    navSolutions['error_Z_ECEF']
+]).T  # shape (N, 3)
+
+if dynamic:
+    # ECEF2ENU: shape (3, 3, N)
+    # Transpose each 3x3 rotation matrix: (3, 3, N) → (N, 3, 3)
+    ECEF2ENU_T = np.transpose(ECEF2ENU, (2, 0, 1))  # (N, 3, 3)
+    ECEF2ENU_T = np.transpose(ECEF2ENU_T, (0, 2, 1))  # Transpose each (3x3)
+    # Transform each error vector: (N, 3, 3) @ (N, 3, 1) → (N, 3)
+    enu_errors_array = np.einsum('nij,nj->ni', ECEF2ENU_T, ecef_errors)
+else:
+    # Static rotation: shape (3, 3)
+    enu_errors_array = (ECEF2ENU @ ecef_errors.T).T  # shape (N, 3)
+
+# Assign ENU components back to navSolutions
+enu_label = ['E_ENU', 'N_ENU', 'U_ENU']
+for i in range(3):
+    navSolutions[enu_label[i]] = enu_errors_array[:, i]
+
+# save to csv file
 df = pd.DataFrame.from_dict(navSolutions)
 csv_file_name = path + "pvt.csv"
 df.to_csv(csv_file_name)

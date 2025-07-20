@@ -15,8 +15,12 @@ fi
 date_str="`date +'%Y%m%d%H%M%S'`"
 mkdir $date_str
 
-# set parameters manually.
-bladerfargs="-t 2024/01/15,02:20:00 -e $confpath/../src/bladeGPS/brdc0150.24n -d 4800 -l 0.0,135.0,0.0 -U ../src/bladeGPS/LLO_1_3_last.csv -s ./$date_str/ -a 5 -r 0,90 -R 0,-90 -p -E -I"
+# set parameters manually. NOTE: SC came out from the lunar occultation 01:18 <- LLO
+# NOTE: user_motion_file should has the suffix of _ecef and _eci
+u_option="" # Ch1
+U_option="-U $confpath/../src/bladeGPS/lto_states_ecef.csv" # Ch2
+bladerfargs="-t 2024/01/15,01:00:00 -e $confpath/../src/bladeGPS/brdc0150.24n -d 4400 -l 0.0,135.0,0.0 $u_option $U_option -s ./$date_str/ -a -15 -r 0,90 -R 0,-90 -p -E -I"
+# bladerfargs="-t 2024/01/15,01:00:00 -e $confpath/../src/bladeGPS/brdc0150.24n -d 86400 -l 0.0,135.0,0.0 -U ../src/bladeGPS/LLO_1818_1day.csv -s ./$date_str/ -a -15 -r 0,90 -R 0,-90 -p -E -I -f"
 
 ###
 # run
@@ -42,4 +46,17 @@ merge_script=$confpath"/../scripts/merge_txt_to_csv.sh"
 bash $merge_script
 plot_script=$confpath"/../scripts/python/plot_non_pvt_log.py"
 python3 $plot_script
+
+eci_log_generator=$confpath"/../scripts/python/generate_user_states_eci.py"
+# Ch1
+if [ ! -z "$u_option" ]; then
+    ecef_motion_file="${u_option:3}"
+    python3 $eci_log_generator ./user_states_ch1.txt "${ecef_motion_file:0:-8}eci.csv"
+fi
+# Ch2
+if [ ! -z "$U_option" ]; then
+    ecef_motion_file="${U_option:3}"
+    python3 $eci_log_generator ./user_states_ch2.txt "${ecef_motion_file:0:-8}eci.csv"
+fi
+
 popd
