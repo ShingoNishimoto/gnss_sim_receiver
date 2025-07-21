@@ -28,24 +28,29 @@ import numpy as np
 import pandas as pd
 import pyproj
 import utm
+from astropy import units as u
+from astropy.coordinates import (CIRS, FK5, ITRS, CartesianDifferential,
+                                 CartesianRepresentation)
+from astropy.time import Time
 from scipy.interpolate import CubicSpline
 
 
-def get_interpolated_positions(filename: str, receiver_time: np.array) -> np.array:
-    return interpolate_user_position(read_user_position(filename), receiver_time)
+def get_interpolated_positions(filename: str, receiver_time: np.array, inertial=False) -> np.array:
+    return interpolate_user_state(read_user_position(filename), receiver_time, inertial)
 
 def read_user_position(filename: str) -> np.array:
 
-    user_positions = np.loadtxt(filename, delimiter=',', skiprows=1)
+    user_states = np.loadtxt(filename, delimiter=',', skiprows=1)
     # print(user_positions)
-    return user_positions
+    return user_states # t, gmst, pos, vel
 
-def interpolate_user_position(user_positions: np.array, receiver_time: np.array) -> np.array:
+def interpolate_user_state(user_states: np.array, receiver_time: np.array, inertial: bool) -> np.array:
     # Scipy
-    interpolated_position = np.empty((3, len(receiver_time)))
-    for i in range(3):
-        cubic_spline = CubicSpline(user_positions.T[0], user_positions.T[i + 1], bc_type='natural')
-        interpolated_position[i] = cubic_spline(receiver_time)
+    interpolated_states = np.empty((6, len(receiver_time)))
+    for i in range(6):
+        # Skip t and gmst
+        cubic_spline = CubicSpline(user_states.T[0], user_states.T[i + 2], bc_type='natural')
+        interpolated_states[i] = cubic_spline(receiver_time)
 
     # # Pandas interpolation
     # df = pd.DataFrame({'t': user_positions.T[0], 'x': user_positions.T[1],
@@ -79,13 +84,16 @@ def interpolate_user_position(user_positions: np.array, receiver_time: np.array)
     # UTM_positions = []
     # for pos_ecef in interpolated_position.T:
     #     UTM_positions.append(ecef_to_utm(pos_ecef))
-    UTM_positions = ecef_to_utm(interpolated_position)
+    if inertial:
+        return interpolated_states
 
-    true_positions = np.append(interpolated_position, UTM_positions, axis=0)
-    return true_positions
+    UTM_positions = ecef_to_utm(interpolated_states[0:3], interpolated_states[0:3])
+
+    true_states = np.append(interpolated_states, UTM_positions, axis=0)
+    return true_states
     # return interpolated_position
 
-def ecef_to_utm(ecef_pos: np.array) -> np.array:
+def ecef_to_utm(ecef_pos: np.array, ecef_ref: np.array) -> np.array:
     """
     Convert an array of ECEF coordinates to UTM coordinates.
 
@@ -105,14 +113,15 @@ def ecef_to_utm(ecef_pos: np.array) -> np.array:
     # lon_lat_proj = pyproj.Proj(proj='longlat', datum='WGS84')
     # ecef_to_lla = pyproj.Transformer.from_crs(wgs84.crs, lon_lat_proj.crs)
     ecef_to_lla = pyproj.Transformer.from_crs("EPSG:4978", "EPSG:4326", always_xy=True)
-    lon, lat, alt = ecef_to_lla.transform(x_ecef, y_ecef, z_ecef)
-    lat_lon = np.array([lat, lon])
+    # Transformer should use reference position
+    lon_ref, lat_ref, alt_ref = ecef_to_lla.transform(ecef_ref[0], ecef_ref[1], ecef_ref[2])
+    lat_lon_ref = np.array([lat_ref, lon_ref])
 
     # Define the output UTM projection
     # zone = utm.latlon_to_zone_number(lat, lon)
-    zone = np.floor((lon + 180) / 6).astype(int) + 1
+    zone = np.floor((lon_ref + 180) / 6).astype(int) + 1
     # hemisphere = "326" if lat.any() >= 0 else "327"
-    hemisphere_codes = np.where(lat >= 0, 326, 327)
+    hemisphere_codes = np.where(lat_ref >= 0, 326, 327)
     # utm_epsg = f"EPSG:{hemisphere}{zone:02d}"
     utm_epsg_codes = hemisphere_codes * 100 + zone
     # utm_crs = pyproj.CRS.from_epsg(utm_epsg)
@@ -130,6 +139,148 @@ def ecef_to_utm(ecef_pos: np.array) -> np.array:
 
     # Convert lat/lon to UTM
     # easting, northing, alt = ecef_to_utm.transform(x_ecef, y_ecef, z_ecef)
-
     # return np.array([easting, northing, alt])
+
+    # Lat, lon for output.
+    lon, lat, alt = ecef_to_lla.transform(x_ecef, y_ecef, z_ecef)
+    lat_lon = np.array([lat, lon])
     return np.vstack([utm_pos.T, lat_lon])
+
+def batch_eci_to_rtn_full(r_target, v_target, r_ref, v_ref):
+    """
+    Converts a batch of ECI positions and velocities to RTN coordinates.
+
+    Parameters:
+        r_target : (N, 3) ndarray - Target satellite ECI positions
+        v_target : (N, 3) ndarray - Target satellite ECI velocities
+        r_ref    : (N, 3) ndarray - Reference satellite ECI positions
+        v_ref    : (N, 3) ndarray - Reference satellite ECI velocities
+
+    Returns:
+        r_rtn : (N, 3) ndarray - Relative positions in RTN
+        v_rtn : (N, 3) ndarray - Relative velocities in RTN
+    """
+    # RTN unit vectors
+    r_hat = r_ref / np.linalg.norm(r_ref, axis=1)[:, None]
+    h = np.cross(r_ref, v_ref)
+    n_hat = h / np.linalg.norm(h, axis=1)[:, None]
+    t_hat = np.cross(n_hat, r_hat)
+
+    # RTN basis rotation matrix (ECI → RTN)
+    R_mat = np.stack([r_hat, t_hat, n_hat], axis=1)  # shape (N, 3, 3)
+
+    # Relative position and velocity in ECI
+    delta_r = r_target - r_ref
+    delta_v = v_target - v_ref
+
+    # Transform to RTN frame
+    r_rtn = np.einsum('nij,nj->ni', R_mat, delta_r)
+    v_rtn = np.einsum('nij,nj->ni', R_mat, delta_v)
+
+    return r_rtn, v_rtn
+
+def gps_to_gmst(gps_week, tow_seconds):
+    # Total GPS seconds since GPS epoch
+    gps_seconds = gps_week * 7 * 86400 + tow_seconds
+
+    # Create GPS time using 'gps' format
+    t_gps = Time(gps_seconds, format='gps')    # Total seconds since GPS epoch
+
+    # Convert to UTC
+    t_utc = t_gps.utc
+
+    # Get GMST in seconds (SI)
+    gmst_sec = t_utc.sidereal_time('mean', 'greenwich').hour * 3600 * 86164.0905 / 86400 # shape (,) or (N,)
+
+    return gmst_sec  # NOTE: It is in SI seconds.
+
+# FIXME: not used
+def ecef_to_ecij2000(position_ecef, velocity_ecef, utc_times):
+    """
+    Convert ECEF position and velocity to ECI (J2000) frame using astropy.
+
+    Parameters:
+        position_ecef : np.ndarray (3,) or (N, 3) in meters
+        velocity_ecef : np.ndarray (3,) or (N, 3) in m/s
+        utc_times     : astropy Time object (scalar or array of length N)
+
+    Returns:
+        position_eci : np.ndarray (3,) or (N, 3)
+        velocity_eci : np.ndarray (3,) or (N, 3)
+    """
+    # Handle input shape
+    position_ecef = np.atleast_2d(position_ecef)
+    velocity_ecef = np.atleast_2d(velocity_ecef)
+
+    # Convert to CartesianRepresentation with velocity
+    rep = CartesianRepresentation(
+        x=position_ecef[:, 0] * u.m,
+        y=position_ecef[:, 1] * u.m,
+        z=position_ecef[:, 2] * u.m,
+        differentials=CartesianDifferential(
+            d_x=velocity_ecef[:, 0] * u.m / u.s,
+            d_y=velocity_ecef[:, 1] * u.m / u.s,
+            d_z=velocity_ecef[:, 2] * u.m / u.s
+        )
+    )
+
+    # ECEF → ITRS with velocity
+    itrs = ITRS(rep, obstime=utc_times)
+
+    # ITRS → CIRS → FK5 (J2000)
+    cirs = itrs.transform_to(CIRS(obstime=utc_times))
+    fk5 = cirs.transform_to(FK5(equinox=Time("J2000")))
+
+    # Extract position and velocity in ECI (J2000)
+    pos = fk5.cartesian.xyz.to_value(u.m).T  # shape (N, 3)
+    vel = fk5.cartesian.differentials['s'].d_xyz.to_value(u.m/u.s).T  # shape (N, 3)
+
+    return pos.squeeze(), vel.squeeze()
+
+def ecef_to_eci_simple(pos_ecef, vel_ecef, gmst_sec):
+    """
+    Converts ECEF position and velocity to ECI using a Z-axis rotation defined by GMST in seconds.
+
+    Parameters:
+        pos_ecef : ndarray of shape (3,) or (N, 3), in meters
+        vel_ecef : ndarray of shape (3,) or (N, 3), in m/s
+        gmst_sec : float or ndarray of shape (N,) — GMST in sidereal seconds
+
+    Returns:
+        pos_eci : ndarray of shape (3,) or (N, 3)
+        vel_eci : ndarray of shape (3,) or (N, 3)
+    """
+    omega_earth = 7.2921150e-5  # rad/s (mean rotation rate)
+    gmst_rad = omega_earth * gmst_sec  # convert sec → rad
+    # gmst_rad = (np.asarray(gmst_sec) / 86400.0) * 2 * np.pi  # convert sec → rad
+
+    pos_ecef = np.atleast_2d(pos_ecef)
+    vel_ecef = np.atleast_2d(vel_ecef)
+    gmst_rad = np.atleast_1d(gmst_rad)
+
+    N = pos_ecef.shape[0]
+    if gmst_rad.size == 1:
+        gmst_rad = np.full(N, gmst_rad[0])
+
+    pos_eci = np.zeros_like(pos_ecef)
+    vel_eci = np.zeros_like(vel_ecef)
+
+    for i in range(N):
+        c = np.cos(-gmst_rad[i])
+        s = np.sin(-gmst_rad[i])
+
+        R = np.array([
+            [ c,  s, 0],
+            [-s,  c, 0],
+            [ 0,  0, 1]
+        ])
+
+        r_eci = R @ pos_ecef[i]
+        v_rot = R @ vel_ecef[i]
+        omega_vec = np.array([0, 0, omega_earth])
+        v_eci = v_rot + np.cross(omega_vec, r_eci)
+
+        pos_eci[i] = r_eci
+        vel_eci[i] = v_eci
+
+    return pos_eci.squeeze(), vel_eci.squeeze()
