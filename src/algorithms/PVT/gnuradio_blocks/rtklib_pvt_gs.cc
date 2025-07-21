@@ -2137,13 +2137,13 @@ void rtklib_pvt_gs::write_clock_difference(const double clock_diff_s, const doub
             str_tag_tow_s.erase(fixed_char_num, str_tag_tow_s.size() - fixed_char_num);
         }
     stream.str("");
-    // convert clock difference from double to string (in 16 characters including point)
-    stream << std::setprecision(15) << std::setw(fixed_char_num) << clock_diff_s;
+    // convert clock difference from double to string (in 18 characters including point)
+    stream << std::setprecision(16) << std::setw(fixed_char_num + 2) << clock_diff_s;  // width is 18 for clock diff considering negative sign.
     std::string str_clock_diff_s = stream.str();
-    if (str_clock_diff_s.size() > fixed_char_num)
+    if (str_clock_diff_s.size() > fixed_char_num + 2)
         {
             // erase characters.
-            str_clock_diff_s.erase(fixed_char_num, str_clock_diff_s.size() - fixed_char_num);
+            str_clock_diff_s.erase(fixed_char_num + 2, str_clock_diff_s.size() - (fixed_char_num + 2));
         }
     stream.str("");
 
@@ -2370,8 +2370,7 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                             static double dt_new = 0.0;
                             if (dt_gnssr_aowr_s != 0 && (fabs(dt_current - dt_gnssr_aowr_s) > dt_dev_thresh
                                 || fabs(dt0_current - dt0) > dt_dev_thresh
-                                || fabs(dt0 + Ci - dt_gnssr_aowr_s_by_cp) > dt_cp_dev_thresh
-                                || (pseudo_sat_observable.RX_time - initial_rx_time) > 40))
+                                || fabs(dt0 + Ci - dt_gnssr_aowr_s_by_cp) > dt_cp_dev_thresh))
                                 {
                                     LOG(INFO) << "PS's PR was deviated! dt Diff: " << std::fixed << std::setprecision(10) << dt_current - dt_gnssr_aowr_s << ", dt0 diff: " << dt0_current - dt0;
                                     dev_count++;
@@ -2385,7 +2384,7 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                                     else
                                         dt_new_count = 0;
                                 }
-                            else
+                            else if ((pseudo_sat_observable.RX_time - initial_rx_time) <= 40)
                                 {
                                     const int float_num = 12;
                                     LOG(INFO) << "dt_current: " << std::fixed << std::setprecision(float_num) << dt_current;
@@ -2430,7 +2429,7 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                         }
                 }
             // For debug
-            // if (flag_ps_observed) LOG(INFO) << "dt_GNSSR-AOWR [s]: " << std::fixed << std::setprecision(10) << dt_gnssr_aowr_s;
+            // if (flag_ps_observed) LOG(INFO) << "tau [s]: " << std::fixed << std::setprecision(10) << dt_gnssr_aowr_s_by_cp;
 
             // ############ 2. APPLY HAS CORRECTIONS IF AVAILABLE ####
             if (d_use_has_corrections && !d_gnss_observables_map.empty())
