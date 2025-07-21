@@ -794,6 +794,11 @@ Rtklib_Pvt::Rtklib_Pvt(const ConfigurationInterface* configuration,
     const double carrier_phase_error_factor_b = configuration->property(role + ".carrier_phase_error_factor_b", 0.003);
 
     const bool bancroft_init = configuration->property(role + ".bancroft_init", true);
+    const bool clock_bias_fixed = configuration->property(role + ".enable_rx_clock_propagation", false);
+    const bool fixed_position_mode = configuration->property(role + ".fixed_position", false);
+    const double known_pos_lat = configuration->property(role + ".known_pos_lat", 0.0);
+    const double known_pos_lon = configuration->property(role + ".known_pos_lon", 135.0);
+    const double known_pos_alt = configuration->property(role + ".known_pos_alt", 0.0);
 
     snrmask_t snrmask = {{}, {{}, {}}};
 
@@ -854,8 +859,10 @@ Rtklib_Pvt::Rtklib_Pvt(const ConfigurationInterface* configuration,
         {{}, {{}, {}}, {{}, {}}, {}, {}},                                                  /* exterr_t exterr   extended receiver error model */
         0,                                                                                 /* disable L2-AR */
         {},                                                                                /* char pppopt[256]   ppp option   "-GAP_RESION="  default gap to reset iono parameters (ep) */
-        bancroft_init,                                                                      /* enable Bancroft initialization for the first iteration of the PVT computation, useful in some geometries */
-        false                                                                               /* enable clock bias fixed mode, when enable_rx_clock_propagation is enable, it will be enable after fixing position and clock bias */
+        bancroft_init,                                                                     /* enable Bancroft initialization for the first iteration of the PVT computation, useful in some geometries */
+        clock_bias_fixed,                                                                  /* enable clock bias fixed mode, when enable_rx_clock_propagation is enable, it will be enable after fixing position and clock bias */
+        fixed_position_mode,                                                               /* enable fixed position mode so estimate only the receiver clock bias */
+        {known_pos_lat, known_pos_lon, known_pos_alt}                                      /* known position for the fixed_position_mode */
     };
 
     rtkinit(&rtk, &rtklib_configuration_options);

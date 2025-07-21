@@ -1005,7 +1005,9 @@ typedef struct
     int freqopt;                  /* disable L2-AR */
     char pppopt[256];             /* ppp option */
     bool bancroft_init;           /* enable Bancroft initialization for the first iteration of the PVT computation */
-    bool clock_bias_fixed;             /* receiver clock bias fixed mode*/
+    bool clock_bias_fixed;        /* receiver clock bias fixed mode */
+    bool fixed_position_mode;     /* Use fixed position and estimate only receiver clock bias */
+    double known_receiver_pos[3]; /* Known receiver geodetic position (lat, lon, alt) for fixed_position_mode */
 } prcopt_t;
 
 

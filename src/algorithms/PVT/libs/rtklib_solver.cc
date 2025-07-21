@@ -908,6 +908,7 @@ void Rtklib_Solver::get_current_has_obs_correction(const std::string &signal, ui
 }
 
 
+// FIXME: flag_clock_prop can be eliminated.
 bool Rtklib_Solver::get_PVT(const std::map<int, Gnss_Synchro> &gnss_observables_map, double kf_update_interval_s, bool flag_clock_prop)
 {
     std::map<int, Gnss_Synchro>::const_iterator gnss_observables_iter;
@@ -1670,7 +1671,7 @@ bool Rtklib_Solver::get_PVT(const std::map<int, Gnss_Synchro> &gnss_observables_
                             this->set_course_over_ground(new_cog);
                         }
 
-                    if (!flag_clock_prop)
+                    if (!d_rtk.opt.clock_bias_fixed)
                         {
                             this->set_time_offset_s(rx_position_and_time[3]);
                         }

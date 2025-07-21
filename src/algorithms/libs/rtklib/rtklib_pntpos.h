@@ -113,7 +113,7 @@ int raim_fde(const obsd_t *obs, int n, const double *rs,
 
 /* doppler residuals ---------------------------------------------------------*/
 int resdop(const obsd_t *obs, int n, const double *rs, const double *dts,
-    const nav_t *nav, const double *rr, const double *x,
+    const nav_t *nav, const prcopt_t *opt, const double *rr, const double *x,
     const double *azel, const int *vsat, double *v, double *H);
 
 /* estimate receiver velocity ------------------------------------------------*/
