@@ -501,6 +501,10 @@ Rtklib_Pvt::Rtklib_Pvt(const ConfigurationInterface* configuration,
         {
             positioning_mode = PMODE_KINEMA;
         }
+    if (positioning_mode_str == "Fixed")
+        {
+            positioning_mode = PMODE_FIXED;
+        }
     if (positioning_mode_str == "PPP_Static")
         {
             positioning_mode = PMODE_PPP_STATIC;
@@ -508,6 +512,10 @@ Rtklib_Pvt::Rtklib_Pvt(const ConfigurationInterface* configuration,
     if (positioning_mode_str == "PPP_Kinematic")
         {
             positioning_mode = PMODE_PPP_KINEMA;
+        }
+    if (positioning_mode_str == "PPP_Fixed")
+        {
+            positioning_mode = PMODE_PPP_FIXED;
         }
     if (positioning_mode_str == "EKF_Satellite")
         {
@@ -802,6 +810,9 @@ Rtklib_Pvt::Rtklib_Pvt(const ConfigurationInterface* configuration,
 
     snrmask_t snrmask = {{}, {{}, {}}};
 
+    double fixed_ru[3];
+    double fixed_pos[3] = {known_pos_lat * D2R, known_pos_lon * D2R, known_pos_alt};
+    pos2ecef(fixed_pos, fixed_ru);
     prcopt_t rtklib_configuration_options = {
         positioning_mode,                                                                  /* positioning mode (PMODE_XXX) see src/algorithms/libs/rtklib/rtklib.h */
         0,                                                                                 /* solution type (0:forward,1:backward,2:combined) */
@@ -843,7 +854,7 @@ Rtklib_Pvt::Rtklib_Pvt(const ConfigurationInterface* configuration,
         threshold_reject_innovation,                                                       /* reject threshold of innovation (m) */
         threshold_reject_gdop,                                                             /* reject threshold of gdop */
         {},                                                                                /* double baseline[2] baseline length constraint {const,sigma} (m) */
-        {},                                                                                /* double ru[3]  rover position for fixed mode {x,y,z} (ecef) (m) */
+        {fixed_ru[0], fixed_ru[1], fixed_ru[2]},                                           /* double ru[3]  rover position for fixed mode {x,y,z} (ecef) (m) */
         {},                                                                                /* double rb[3]  base position for relative mode {x,y,z} (ecef) (m) */
         {"", ""},                                                                          /* char anttype[2][MAXANT]  antenna types {rover,base}  */
         {{}, {}},                                                                          /* double antdel[2][3]   antenna delta {{rov_e,rov_n,rov_u},{ref_e,ref_n,ref_u}} */

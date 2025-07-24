@@ -2811,7 +2811,6 @@ int rtkpos(rtk_t *rtk, const obsd_t *obs, int n, const nav_t *nav)
 
     time = rtk->sol.time; /* previous epoch */
 
-    // TODO: add only clock bias estimation in pntpos
     /* rover position by single point positioning */
     if (!pntpos(obs, nu, nav, &rtk->opt, &rtk->sol, nullptr, rtk->ssat, msg))
         {
@@ -2842,7 +2841,6 @@ int rtkpos(rtk_t *rtk, const obsd_t *obs, int n, const nav_t *nav)
     /* precise point positioning */
     if (opt->mode >= PMODE_PPP_KINEMA)
         {
-            // TODO: add only clock bias estimation in pppos
             pppos(rtk, obs, nu, nav);
             outsolstat(rtk);
             return 1;

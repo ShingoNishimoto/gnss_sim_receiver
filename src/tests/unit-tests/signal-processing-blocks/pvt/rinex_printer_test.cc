@@ -135,8 +135,10 @@ void RinexPrinterTest::conf()
         {{}, {{}, {}}, {{}, {}}, {}, {}},                                                  /*  exterr_t exterr   extended receiver error model */
         0,                                                                                 /* disable L2-AR */
         {},                                                                                /* char pppopt[256]   ppp option   "-GAP_RESION="  default gap to reset iono parameters (ep) */
-        true,
-        false                                                                               /* enable Bancroft initialization for the first iteration of the PVT computation, useful in some geometries */
+        true,                                                                              /* enable Bancroft initialization for the first iteration of the PVT computation, useful in some geometries */
+        false,                                                                             /* receiver clock bias fixed mode */
+        false,                                                                             /* Use fixed position and estimate only receiver clock bias */
+        {}                                                                                 /* Known receiver geodetic position (lat, lon, alt) for fixed_position_mode */
     };
 
     rtkinit(&rtk, &rtklib_configuration_options);

@@ -337,6 +337,7 @@ using fatalfunc_t = void(const char *);  //!<  fatal callback function type
 #define STR_HTTP 9     /* stream type: http */
 
 #define NP_PPP(opt) ((opt)->dynamics ? 9 : 3)                                                                    /* number of pos solution */
+// #define NP_PPP(opt) ((opt)->dynamics ? 9 : (opt)->fixed_position_mode ? 0 : 3)                                   /* number of pos solution */
 #define IC_PPP(s, opt) (NP_PPP(opt) + (s))                                                                       /* state index of clocks (s=0:gps,1:glo) */
 #define IT_PPP(opt) (IC_PPP(0, opt) + NSYS)                                                                      /* state index of tropos */
 #define NR_PPP(opt) (IT_PPP(opt) + ((opt)->tropopt < TROPOPT_EST ? 0 : ((opt)->tropopt == TROPOPT_EST ? 1 : 3))) /* number of solutions */

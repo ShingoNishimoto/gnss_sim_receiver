@@ -1203,6 +1203,7 @@ void udpos_ppp(rtk_t *rtk)
         {
             for (i = 0; i < 3; i++)
                 {
+                    // NOTE: small variance ensure that estimation works only for other variables.
                     initx(rtk, rtk->opt.ru[i], 1E-8, i);
                 }
             return;
@@ -1681,6 +1682,14 @@ int res_ppp(int iter __attribute__((unused)), const obsd_t *obs, int n, const do
 
                     v[nv] = meas[j] - r;
 
+                    // // Skip for fixed mode
+                    // if (!opt->fixed_position_mode)
+                    //     {
+                    //         for (k = 0; k < 3; k++)
+                    //             {
+                    //                 H[k + nx * nv] = -e[k];
+                    //             }
+                    //     }
                     for (k = 0; k < 3; k++)
                         {
                             H[k + nx * nv] = -e[k];
