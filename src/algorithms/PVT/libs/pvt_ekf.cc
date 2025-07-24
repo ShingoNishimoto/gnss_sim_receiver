@@ -683,7 +683,7 @@ uint8_t Pvt_Ekf::get_observation(rtk_t* rtk, const obsd_t* obs, int n, const nav
     H_D = mat(4, n);
 
     // NOTE: resdop assumes the states are in ECEF
-    nv = resdop(obs, n, rs, dts, nav, x_p, x_v, azel, vsat.data(), v_D, H_D);
+    nv = resdop(obs, n, rs, dts, nav, &opt, x_p, x_v, azel, vsat.data(), v_D, H_D);
     const double measures_vel_var_ms2 = pow(d_measures_vel_sd_ms, 2);
     for (i = 0; i < nv; i++)
         {

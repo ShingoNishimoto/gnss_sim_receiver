@@ -263,6 +263,7 @@ private:
     uint32_t d_observable_interval_ms;
     uint32_t d_pvt_errors_counter;
     uint32_t d_output_cnt_for_clk_prop_after_fix;
+    uint16_t d_rtk_mode;
 
     bool d_dump;
     bool d_dump_mat;

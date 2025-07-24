@@ -431,6 +431,8 @@ int rescode(int iter, const obsd_t *obs, int n, const double *rs,
     int nx = NX;
     if (opt->clock_bias_fixed)
         nx = 3; // only position
+    else if (opt->fixed_position_mode)
+        nx = 1; // only clock offset
 
     trace(3, "resprng : n=%d\n", n);
 
@@ -512,7 +514,10 @@ int rescode(int iter, const obsd_t *obs, int n, const double *rs,
             /* design matrix */
             for (j = 0; j < nx; j++)
                 {
-                    H[j + nv * nx] = j < 3 ? -e[j] : (j == 3 ? 1.0 : 0.0);
+                    if (opt->fixed_position_mode)
+                        H[j + nv * nx] = 1.0;
+                    else
+                        H[j + nv * nx] = j < 3 ? -e[j] : (j == 3 ? 1.0 : 0.0);
                 }
 
             /* time system and receiver bias offset correction */
@@ -711,6 +716,10 @@ int estpos(const obsd_t *obs, int n, const double *rs, const double *dts,
                     x[6] = sol->dtr[3];
                 }
         }
+    else if (opt->fixed_position_mode)
+        {
+            nx = 1;  // clock bias and drift
+        }
 
     double *dx = new double[nx];
     double *Q = new double[nx * nx];
@@ -739,7 +748,7 @@ int estpos(const obsd_t *obs, int n, const double *rs, const double *dts,
         }
 
     // Rough first estimation to initialize the algorithm
-    if (opt->bancroft_init && (std::sqrt(x[0] * x[0] + x[1] * x[1] + x[2] * x[2]) < 0.1))
+    if (opt->bancroft_init && (std::sqrt(x[0] * x[0] + x[1] * x[1] + x[2] * x[2]) < 0.1) && !opt->fixed_position_mode)
         {
             arma::mat B = arma::mat(n, 4, arma::fill::zeros);
             for (i = 0; i < n; i++)
@@ -794,7 +803,10 @@ int estpos(const obsd_t *obs, int n, const double *rs, const double *dts,
                 }
             for (j = 0; j < nx; j++)
                 {
-                    x[j] += dx[j];
+                    if (opt->fixed_position_mode)
+                        x[3 + j] += dx[j];
+                    else
+                        x[j] += dx[j];
                 }
 
             if (norm_rtk(dx, nx) < 1e-4)
@@ -817,13 +829,21 @@ int estpos(const obsd_t *obs, int n, const double *rs, const double *dts,
                         {
                             sol->rr[j] = j < 3 ? x[j] : 0.0;
                         }
-                    for (j = 0; j < 3; j++)
+                    if (opt->fixed_position_mode)
                         {
-                            sol->qr[j] = static_cast<float>(Q[j + j * nx]);
+                            for (j = 0; j < 6; j++)
+                                sol->qr[j] = 0.0;
                         }
-                    sol->qr[3] = static_cast<float>(Q[1]);      /* cov xy */
-                    sol->qr[4] = static_cast<float>(Q[2 + nx]); /* cov yz */
-                    sol->qr[5] = static_cast<float>(Q[2]);      /* cov zx */
+                    else
+                        {
+                            for (j = 0; j < 3; j++)
+                                {
+                                    sol->qr[j] = static_cast<float>(Q[j + j * nx]);
+                                }
+                            sol->qr[3] = static_cast<float>(Q[1]);      /* cov xy */
+                            sol->qr[4] = static_cast<float>(Q[2 + nx]); /* cov yz */
+                            sol->qr[5] = static_cast<float>(Q[2]);      /* cov zx */
+                        }
                     sol->ns = static_cast<unsigned char>(ns);
                     sol->age = sol->ratio = 0.0;
 
@@ -984,7 +1004,7 @@ int raim_fde(const obsd_t *obs, int n, const double *rs,
 
 /* doppler residuals ---------------------------------------------------------*/
 int resdop(const obsd_t *obs, int n, const double *rs, const double *dts,
-    const nav_t *nav, const double *rr, const double *x,
+    const nav_t *nav, const prcopt_t *opt, const double *rr, const double *x,
     const double *azel, const int *vsat, double *v, double *H)
 {
     double lam;
@@ -998,6 +1018,10 @@ int resdop(const obsd_t *obs, int n, const double *rs, const double *dts,
     int j;
     int nv = 0;
     int band = 0;
+    int nx = 4;
+    if (opt->fixed_position_mode)
+        nx = 1; // only clock offset
+
 
     trace(3, "resdop  : n=%d\n", n);
 
@@ -1044,9 +1068,12 @@ int resdop(const obsd_t *obs, int n, const double *rs, const double *dts,
             v[nv] = -lam * obs[i].D[band] - (rate + x[3] - SPEED_OF_LIGHT_M_S * dts[1 + i * 2]);
 
             /* design matrix */
-            for (j = 0; j < 4; j++)
+            for (j = 0; j < nx; j++)
                 {
-                    H[j + nv * 4] = j < 3 ? -e[j] : 1.0;
+                    if (opt->fixed_position_mode)
+                        H[j + nv * nx] = 1.0;
+                    else
+                        H[j + nv * nx] = j < 3 ? -e[j] : 1.0;
                 }
 
             nv++;
@@ -1061,8 +1088,13 @@ void estvel(const obsd_t *obs, int n, const double *rs, const double *dts,
     const double *azel, const int *vsat)
 {
     double x[4] = {0};
-    double dx[4];
-    double Q[16];
+    int nx = 4;
+    if (opt->fixed_position_mode)
+        {
+            nx = 1; // only clock drift
+        }
+    double *dx = new double[nx];
+    double *Q = new double[nx * nx];
     double *v;
     double *H;
     int i;
@@ -1072,27 +1104,30 @@ void estvel(const obsd_t *obs, int n, const double *rs, const double *dts,
     trace(3, "estvel  : n=%d\n", n);
 
     v = mat(n, 1);
-    H = mat(4, n);
+    H = mat(nx, n);
 
     for (i = 0; i < MAXITR; i++)
         {
             /* doppler residuals */
-            if ((nv = resdop(obs, n, rs, dts, nav, sol->rr, x, azel, vsat, v, H)) < 4)
+            if ((nv = resdop(obs, n, rs, dts, nav, opt, sol->rr, x, azel, vsat, v, H)) < 4)
                 {
                     break;
                 }
             /* least square estimation */
-            if (lsq(H, v, 4, nv, dx, Q))
+            if (lsq(H, v, nx, nv, dx, Q))
                 {
                     break;
                 }
 
-            for (j = 0; j < 4; j++)
+            for (j = 0; j < nx; j++)
                 {
-                    x[j] += dx[j];
+                    if (opt->fixed_position_mode)
+                        x[3 + j] += dx[j];
+                    else
+                        x[j] += dx[j];
                 }
 
-            if (norm_rtk(dx, 4) < 1e-6)
+            if (norm_rtk(dx, nx) < 1e-6)
                 {
                     for (i = 0; i < 3; i++)
                         {

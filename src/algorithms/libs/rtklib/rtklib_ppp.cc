@@ -1203,6 +1203,7 @@ void udpos_ppp(rtk_t *rtk)
         {
             for (i = 0; i < 3; i++)
                 {
+                    // NOTE: small variance ensure that estimation works only for other variables.
                     initx(rtk, rtk->opt.ru[i], 1E-8, i);
                 }
             return;
@@ -1681,6 +1682,14 @@ int res_ppp(int iter __attribute__((unused)), const obsd_t *obs, int n, const do
 
                     v[nv] = meas[j] - r;
 
+                    // // Skip for fixed mode
+                    // if (!opt->fixed_position_mode)
+                    //     {
+                    //         for (k = 0; k < 3; k++)
+                    //             {
+                    //                 H[k + nx * nv] = -e[k];
+                    //             }
+                    //     }
                     for (k = 0; k < 3; k++)
                         {
                             H[k + nx * nv] = -e[k];
@@ -1727,34 +1736,34 @@ int res_ppp(int iter __attribute__((unused)), const obsd_t *obs, int n, const do
                     if (opt->maxinno > 0.0 && fabs(v[nv]) > opt->maxinno && sys != SYS_GLO)
                         {
 #endif
-                    trace(2, "ppp outlier rejected %s sat=%2d type=%d v=%.3f\n",
-                        time_str(obs[i].time, 0), sat, j, v[nv]);
-                    rtk->ssat[sat - 1].rejc[0]++;
-                    continue;
+                            trace(2, "ppp outlier rejected %s sat=%2d type=%d v=%.3f\n",
+                                time_str(obs[i].time, 0), sat, j, v[nv]);
+                            rtk->ssat[sat - 1].rejc[0]++;
+                            continue;
+                        }
+                    if (j == 0)
+                        {
+                            rtk->ssat[sat - 1].vsat[0] = 1;
+                        }
+                    nv++;
+                        }
                 }
-            if (j == 0)
+    for (i = 0; i < nv; i++)
+        {
+            for (j = 0; j < nv; j++)
                 {
-                    rtk->ssat[sat - 1].vsat[0] = 1;
+                    R[i + j * nv] = i == j ? var[i] : 0.0;
                 }
-            nv++;
         }
-}
-for (i = 0; i < nv; i++)
-    {
-        for (j = 0; j < nv; j++)
-            {
-                R[i + j * nv] = i == j ? var[i] : 0.0;
-            }
-    }
-trace(5, "x=\n");
-tracemat(5, x, 1, nx, 8, 3);
-trace(5, "v=\n");
-tracemat(5, v, 1, nv, 8, 3);
-trace(5, "H=\n");
-tracemat(5, H, nx, nv, 8, 3);
-trace(5, "R=\n");
-tracemat(5, R, nv, nv, 8, 5);
-return nv;
+    trace(5, "x=\n");
+    tracemat(5, x, 1, nx, 8, 3);
+    trace(5, "v=\n");
+    tracemat(5, v, 1, nv, 8, 3);
+    trace(5, "H=\n");
+    tracemat(5, H, nx, nv, 8, 3);
+    trace(5, "R=\n");
+    tracemat(5, R, nv, nv, 8, 5);
+    return nv;
 }
 
 

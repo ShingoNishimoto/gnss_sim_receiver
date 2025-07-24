@@ -2658,6 +2658,20 @@ void rtkinit(rtk_t *rtk, const prcopt_t *opt)
     trace(3, "rtkinit :\n");
 
     rtk->sol = sol0;
+    if (opt->fixed_position_mode)
+        {
+            double known_pos_geodetic[3] = {
+                opt->known_receiver_pos[0] * D2R,
+                opt->known_receiver_pos[1] * D2R,
+                opt->known_receiver_pos[2]};
+            double known_pos_ecef[3];
+            pos2ecef(known_pos_geodetic, known_pos_ecef);
+            for (i = 0; i < 3; i++)
+                {
+                    rtk->sol.rr[i] = known_pos_ecef[i];
+                    rtk->sol.rr[3 + i] = 0.0;  // velocity
+                }
+        }
     for (i = 0; i < 6; i++)
         {
             rtk->rb[i] = 0.0;

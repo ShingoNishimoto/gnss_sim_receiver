@@ -538,6 +538,7 @@ rtklib_pvt_gs::rtklib_pvt_gs(uint32_t nchannels,
             d_local_time_str = std::string(" ") + time_zone_abrv + " (UTC " + utc_diff_str.substr(0, 3) + ":" + utc_diff_str.substr(3, 2) + ")";
         }
 
+    d_rtk_mode = rtk.opt.mode;
     if (d_enable_rx_clock_correction == true)
         {
             // setup two PVT solvers: internal solver for rx clock and user solver
@@ -2772,7 +2773,7 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                                             }
                                             write_rx_clock_bias(Rx_clock_offset_s, tag_tow_s_at_ch0, this->d_gnss_observables_map.begin()->second.PRN);
                                         }
-                                    if (d_hybrid_mode && (d_ps_channel != -1) && flag_ps_observed && (d_user_pvt_solver->get_sol_stat() == SOLQ_PPP))
+                                    if (d_hybrid_mode && (d_ps_channel != -1) && flag_ps_observed && (d_rtk_mode != PMODE_PPP_STATIC || (d_rtk_mode == PMODE_PPP_STATIC && d_user_pvt_solver->get_sol_stat() == SOLQ_PPP)))
                                         {
                                             // TODO: set output rate
                                             double clock_diff_s = -dt_gnssr_aowr_s_by_cp + Rx_clock_offset_s;
