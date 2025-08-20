@@ -6,6 +6,7 @@ trap 'stty sane; bladeRF-cli -e "set gain TX1 -22"' INT TERM
 # get absolute path to conf dir
 confpath=$(cd $(dirname $0) && pwd)/../conf
 conffile=$confpath/gnss-sdr_GPS_L1_bladeRF2_micro.conf
+# conffile=$confpath/gnss-sdr_GPS_L1_bladeRF2_micro_drone.conf
 if [ ! -f $conffile ]; then
     echo;echo not found : $conffile;echo
     exit 1
@@ -17,7 +18,7 @@ date_str="`date +'%Y%m%d%H%M%S'`"
 mkdir $date_str
 
 # set parameters manually.
-bladerfargs="-t 2024/01/15,01:00:00 -e $confpath/../src/bladeGPS/brdc0150.24n -d 3000 -l 0.0,135.0,400000000.0 -s ./$date_str/ -a 5 -r 0,-90 -p -I -E -v"
+bladerfargs="-t 2024/01/15,01:00:00 -e $confpath/../src/bladeGPS/brdc0150.24n -d 3000 -l 0.0,135.0,0.0 -s ./$date_str/ -a 5 -r 0,90 -p -I -E -v"
 
 ###
 # run

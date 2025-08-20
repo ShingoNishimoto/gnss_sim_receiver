@@ -34,4 +34,7 @@ void Tlm_Conf::SetFromConfiguration(const ConfigurationInterface *configuration,
         {
             there_are_e6_channels = true;
         }
+    // For hybrid mode
+    hybrid_mode = configuration->property("GNSS-SDR.hybrid_mode", false) || configuration->property("GNSS-SDR.gps_time_share_mode", false);
+    ps_channel_id = configuration->property("GNSS-SDR.pseudo_sat_ch_id", ps_channel_id);
 }
