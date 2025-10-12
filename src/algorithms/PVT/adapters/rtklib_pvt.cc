@@ -931,6 +931,8 @@ Rtklib_Pvt::Rtklib_Pvt(const ConfigurationInterface* configuration,
     pvt_output_parameters.hybrid_mode = configuration->property("GNSS-SDR.hybrid_mode", false);
     pvt_output_parameters.pseudo_sat_channel = configuration->property("GNSS-SDR.pseudo_sat_ch_id", pvt_output_parameters.pseudo_sat_channel);
 
+    pvt_output_parameters.gps_time_share_mode = configuration->property("GNSS-SDR.gps_time_share_mode", false);
+
     // Enable or disable clock propagation mode after fixing position and clock
     pvt_output_parameters.enable_rx_clock_propagation = configuration->property(role + ".enable_rx_clock_propagation", false);
     pvt_output_parameters.output_cnt_for_clk_prop_after_fix = configuration->property(role + ".output_cnt_for_clk_prop_after_fix", 0);

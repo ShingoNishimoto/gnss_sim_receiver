@@ -102,6 +102,7 @@ public:
     bool rec_antenna_attitude_fix = true;
     bool share_rx_clock_bias = false;
     bool hybrid_mode = false;
+    bool gps_time_share_mode = false;
 
     // PVT KF parameters
     bool enable_pvt_kf = false;

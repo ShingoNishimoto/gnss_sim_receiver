@@ -24,6 +24,8 @@
  -----------------------------------------------------------------------------
 """
 
+from datetime import timezone
+
 import numpy as np
 import pandas as pd
 import pyproj
@@ -46,10 +48,10 @@ def read_user_position(filename: str) -> np.array:
 
 def interpolate_user_state(user_states: np.array, receiver_time: np.array, inertial: bool) -> np.array:
     # Scipy
-    interpolated_states = np.empty((6, len(receiver_time)))
-    for i in range(6):
+    interpolated_states = np.empty((7, len(receiver_time))) # gmst, r, and v
+    for i in range(7):
         # Skip t and gmst
-        cubic_spline = CubicSpline(user_states.T[0], user_states.T[i + 2], bc_type='natural')
+        cubic_spline = CubicSpline(user_states.T[0], user_states.T[i + 1], bc_type='natural')
         interpolated_states[i] = cubic_spline(receiver_time)
 
     # # Pandas interpolation
@@ -87,7 +89,7 @@ def interpolate_user_state(user_states: np.array, receiver_time: np.array, inert
     if inertial:
         return interpolated_states
 
-    UTM_positions = ecef_to_utm(interpolated_states[0:3], interpolated_states[0:3])
+    UTM_positions = ecef_to_utm(interpolated_states[1:4], interpolated_states[1:4])
 
     true_states = np.append(interpolated_states, UTM_positions, axis=0)
     return true_states
@@ -194,6 +196,34 @@ def gps_to_gmst(gps_week, tow_seconds):
 
     return gmst_sec  # NOTE: It is in SI seconds.
 
+def gps_to_utc(tow_seconds, gps_week=None):
+    """
+    Convert GPS time to UTC.
+
+    Parameters:
+        gps_seconds : float or array-like
+            GPS seconds since GPS epoch (1980-01-06 00:00:00 UTC).
+            If gps_week is provided, gps_seconds is interpreted as seconds-of-week.
+        gps_week : int or array-like, optional
+            GPS week number. Required if gps_seconds is seconds-of-week.
+
+    Returns:
+        utc : astropy.time.Time object (can be scalar or array)
+    """
+    # Total GPS seconds since GPS epoch
+    gps_seconds = gps_week * 7 * 86400 + tow_seconds
+
+    # Create GPS time using 'gps' format
+    t_gps = Time(gps_seconds, format='gps', scale='utc')    # Total seconds since GPS epoch
+
+    # Convert to UTC
+    # t_utc = t_gps.utc
+
+    # # Convert to timezone-aware datetime.datetime
+    t_utc = t_gps.to_datetime(timezone=timezone.utc)
+
+    return t_utc
+
 # FIXME: not used
 def ecef_to_ecij2000(position_ecef, velocity_ecef, utc_times):
     """
@@ -237,21 +267,21 @@ def ecef_to_ecij2000(position_ecef, velocity_ecef, utc_times):
 
     return pos.squeeze(), vel.squeeze()
 
-def ecef_to_eci_simple(pos_ecef, vel_ecef, gmst_sec):
+def ecef_to_eci_simple(pos_ecef, vel_ecef, gmst_rad):
     """
-    Converts ECEF position and velocity to ECI using a Z-axis rotation defined by GMST in seconds.
+    Converts ECEF position and velocity to ECI using a Z-axis rotation defined by GMST in radians.
 
     Parameters:
         pos_ecef : ndarray of shape (3,) or (N, 3), in meters
         vel_ecef : ndarray of shape (3,) or (N, 3), in m/s
-        gmst_sec : float or ndarray of shape (N,) — GMST in sidereal seconds
+        gmst_rad : float or ndarray of shape (N,) — GMST in radians
 
     Returns:
         pos_eci : ndarray of shape (3,) or (N, 3)
         vel_eci : ndarray of shape (3,) or (N, 3)
     """
     omega_earth = 7.2921150e-5  # rad/s (mean rotation rate)
-    gmst_rad = omega_earth * gmst_sec  # convert sec → rad
+    # gmst_rad = omega_earth * gmst_sec  # convert sec → rad
     # gmst_rad = (np.asarray(gmst_sec) / 86400.0) * 2 * np.pi  # convert sec → rad
 
     pos_ecef = np.atleast_2d(pos_ecef)

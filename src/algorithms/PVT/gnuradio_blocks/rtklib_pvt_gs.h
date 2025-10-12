@@ -174,6 +174,7 @@ private:
 
     void write_rx_clock_bias(const double rx_clock_offset_s, const double tag_tow_s, const uint32_t PRN);
     void write_clock_difference(const double clock_diff_s, const double tag_tow_s);
+    void write_ini_gps_time(const double clock_diff_s, const double tag_tow_s);
 
     std::fstream d_log_timetag_file;
 
@@ -287,6 +288,7 @@ private:
     bool d_use_unhealthy_sats;
     bool d_share_rx_clock_bias;
     bool d_hybrid_mode;
+    bool d_gps_time_share_mode;
 
     // for mmap
     typedef struct
@@ -297,6 +299,9 @@ private:
         uint32_t length;
         const uint8_t size_one_line;
     } sharing_info_mmap;
+
+    bool init_mmap(sharing_info_mmap& mmap_info, const std::string& path, bool create);
+
     sharing_info_mmap d_mmap_rx_clock_bias = {
         0,
         NULL,
@@ -311,6 +316,13 @@ private:
         0,
         21600,  // (= 36 * 12 / 0.02) for 12 sec
         36  // Bytes
+    };
+    sharing_info_mmap d_mmap_gnss_time = {
+        0,
+        NULL,
+        0,
+        23,  // (= 23 * 1)
+        23   // Bytes
     };
 };
 

@@ -187,7 +187,8 @@ rtklib_pvt_gs::rtklib_pvt_gs(uint32_t nchannels,
       d_use_has_corrections(conf_.use_has_corrections),
       d_use_unhealthy_sats(conf_.use_unhealthy_sats),
       d_share_rx_clock_bias(conf_.share_rx_clock_bias),
-      d_hybrid_mode(conf_.hybrid_mode)
+      d_hybrid_mode(conf_.hybrid_mode),
+      d_gps_time_share_mode(conf_.gps_time_share_mode)
 {
     // Send feedback message to observables block with the receiver clock offset
     this->message_port_register_out(pmt::mp("pvt_to_observables"));
@@ -584,72 +585,18 @@ rtklib_pvt_gs::rtklib_pvt_gs(uint32_t nchannels,
     // clock bias share mode
     if (d_share_rx_clock_bias)
         {
-            // open file TODO: need to change the directory for sharing
-            if ((d_mmap_rx_clock_bias.fd = open("./rx_clock_bias.txt", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR)) < 0)
-                {
-                    std::cerr << "Rx clock bias file cannot be created: " << strerror(errno) << '\n';
-                    exit(EXIT_FAILURE);
-                }
-
-            // strech the file size to the size of the mmapped array
-            if (lseek(d_mmap_rx_clock_bias.fd, d_mmap_rx_clock_bias.length - 1, SEEK_SET) == -1)
-                {
-                    std::cerr << "Failed to strech the file size: " << strerror(errno) << '\n';
-                    exit(EXIT_FAILURE);
-                }
-            // Write zero byte at the end of the streched file
-            if (write(d_mmap_rx_clock_bias.fd, "", 1) == -1)
-                {
-                    close(d_mmap_rx_clock_bias.fd);
-                    std::cerr << "Error writing last byte of the file" << strerror(errno) << '\n';
-                }
-            // mapping
-            if ((d_mmap_rx_clock_bias.mapped_arr = reinterpret_cast<char*>(mmap(NULL, d_mmap_rx_clock_bias.length, PROT_WRITE | PROT_READ, MAP_SHARED_VALIDATE, d_mmap_rx_clock_bias.fd, 0))) == MAP_FAILED)
-                {
-                    close(d_mmap_rx_clock_bias.fd);
-                    std::cerr << "Failed to mmap: " << strerror(errno) << '\n';
-                    exit(EXIT_FAILURE);
-                }
-            // fill with space
-            for (u_int32_t i = 0; i < d_mmap_rx_clock_bias.length; i++)
-                {
-                    d_mmap_rx_clock_bias.mapped_arr[i] = ' ';
-                }
+            if (!init_mmap(d_mmap_rx_clock_bias, "./rx_clock_bias.txt", true))
+                exit(EXIT_FAILURE);
         }
-
     if (d_hybrid_mode)
         {
-            // open file TODO: need to change the directory for sharing
-            if ((d_mmap_clock_diff.fd = open("./clock_diff.txt", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR)) < 0)
-                {
-                    std::cerr << "Clock difference file cannot be created: " << strerror(errno) << '\n';
-                    exit(EXIT_FAILURE);
-                }
-
-            // stretch the file size to the size of the mmapped array
-            if (lseek(d_mmap_clock_diff.fd, d_mmap_clock_diff.length - 1, SEEK_SET) == -1)
-                {
-                    std::cerr << "Failed to stretch the file size: " << strerror(errno) << '\n';
-                    exit(EXIT_FAILURE);
-                }
-            // Write zero byte at the end of the stretched file
-            if (write(d_mmap_clock_diff.fd, "", 1) == -1)
-                {
-                    close(d_mmap_clock_diff.fd);
-                    std::cerr << "Error writing last byte of the file" << strerror(errno) << '\n';
-                }
-            // mapping
-            if ((d_mmap_clock_diff.mapped_arr = reinterpret_cast<char*>(mmap(NULL, d_mmap_clock_diff.length, PROT_WRITE | PROT_READ, MAP_SHARED_VALIDATE, d_mmap_clock_diff.fd, 0))) == MAP_FAILED)
-                {
-                    close(d_mmap_clock_diff.fd);
-                    std::cerr << "Failed to mmap: " << strerror(errno) << '\n';
-                    exit(EXIT_FAILURE);
-                }
-            // fill with space
-            for (u_int32_t i = 0; i < d_mmap_clock_diff.length; i++)
-                {
-                    d_mmap_clock_diff.mapped_arr[i] = ' ';
-                }
+            if (!init_mmap(d_mmap_clock_diff, "./clock_diff.txt", true))
+                exit(EXIT_FAILURE);
+        }
+    if (d_gps_time_share_mode)
+        {
+            if (!init_mmap(d_mmap_gnss_time, "./ini_gps_time.txt", true))
+                exit(EXIT_FAILURE);
         }
 
     d_start = std::chrono::system_clock::now();
@@ -1243,6 +1190,21 @@ rtklib_pvt_gs::~rtklib_pvt_gs()
                     if (close(d_mmap_clock_diff.fd) == -1)
                         {
                             std::cerr << "Clock difference file cannot be closed: " << strerror(errno) << '\n';
+                        }
+                }
+
+            if (d_gps_time_share_mode)
+                {
+                    // unmap
+                    if (munmap(d_mmap_gnss_time.mapped_arr, d_mmap_gnss_time.length) == -1)
+                        {
+                            std::cerr << "Cannot unmap: " << strerror(errno) << '\n';
+                        }
+
+                    // close file
+                    if (close(d_mmap_gnss_time.fd) == -1)
+                        {
+                            std::cerr << "GNSS time file cannot be closed: " << strerror(errno) << '\n';
                         }
                 }
         }
@@ -2332,8 +2294,11 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
             static double dt_gnssr_aowr_s = 0;
             static double dt_gnssr_aowr_s_by_cp = 0;
             static bool flag_ps_observed = false;
+
+            // For time share of Drone experiment
+            static bool time_diff_obtained = false;
             // static double tx_tow_pseudo_sat_s = 0;
-            if (d_hybrid_mode && (d_ps_channel != -1) && !d_gnss_observables_map.empty())
+            if ((d_hybrid_mode || (d_gps_time_share_mode && !time_diff_obtained)) && (d_ps_channel != -1) && !d_gnss_observables_map.empty())
                 {
                     auto itr = d_gnss_observables_map.find(d_ps_channel);
                     // NOTE: There might be jump when fixing the dt and ending the measurement, so filtering pseudo range.
@@ -2351,6 +2316,11 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
                                 initial_rx_time = pseudo_sat_observable.RX_time;
                             double dt_current = pseudo_sat_observable.RX_time - pseudo_sat_observable.interp_TOW_ms / 1000.0;
                             // double dt_current = pseudo_sat_observable.Pseudorange_m / SPEED_OF_LIGHT_M_S;
+                            if (d_gps_time_share_mode)
+                                {
+                                    dt_gnssr_aowr_s = dt_current;
+                                    time_diff_obtained = true;
+                                }
                             // NOTE: to avoid round error for averaging, store the integer values here.
                             static int64_t dt_int_s = static_cast<int64_t>(std::round(dt_current));
                             const auto ps_freq_map = SIGNAL_FREQ_MAP.find(std::string(pseudo_sat_observable.Signal, 2));
@@ -2781,6 +2751,28 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
 
                                             write_clock_difference(clock_diff_s, est_tx_tow_pseudo_sat);
                                         }
+                                    // Log the GPS time (utc) corresponding initial AOWR time.
+                                    static bool gps_time_written = false;
+                                    if (d_gps_time_share_mode && time_diff_obtained && !gps_time_written)
+                                        {
+                                            double current_tow_aowr_s = static_cast<double>(current_RX_time_ms) * 1e-3 - dt_gnssr_aowr_s;
+
+                                            boost::posix_time::ptime ini_gps_ptime = d_user_pvt_solver->get_position_UTC_time() - boost::posix_time::microseconds(static_cast<long>(std::llround((current_tow_aowr_s - 1000) * 1e6)));
+                                            std::ostringstream oss;
+                                            // Define facet: keep 3 fractional digits (milliseconds)
+                                            boost::posix_time::time_facet *facet = new boost::posix_time::time_facet("%Y-%m-%d %H:%M:%S.%f");
+                                            oss.imbue(std::locale(std::cout.getloc(), facet));
+                                            oss << ini_gps_ptime;
+
+                                            std::string formatted = oss.str();
+
+                                            // Trim to milliseconds (3 digits)
+                                            if (formatted.size() > 23)
+                                                formatted.erase(23);  // YYYY-mm-dd HH:MM:SS.mmm
+
+                                            std::strncpy(d_mmap_gnss_time.mapped_arr, formatted.c_str(), d_mmap_gnss_time.size_one_line);
+                                            gps_time_written = true;
+                                        }
                                 }
                         }
 
@@ -2866,3 +2858,56 @@ int rtklib_pvt_gs::work(int noutput_items, gr_vector_const_void_star& input_item
 
     return noutput_items;
 }
+
+
+bool rtklib_pvt_gs::init_mmap(sharing_info_mmap& mmap_info, const std::string& path, bool create)
+{
+    // open file
+    if (create)
+        mmap_info.fd = open(path.c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+    else
+        mmap_info.fd = open(path.c_str(), O_RDONLY);
+
+    if (mmap_info.fd < 0)
+        {
+            std::cerr << "Failed to open " << path << ": " << strerror(errno) << std::endl;
+            return false;
+        }
+
+    if (create)
+        {
+            // stretch file size
+            if (lseek(mmap_info.fd, mmap_info.length - 1, SEEK_SET) == -1)
+                {
+                    std::cerr << "Failed to stretch " << path << ": " << strerror(errno) << std::endl;
+                    close(mmap_info.fd);
+                    return false;
+                }
+
+            // write last byte
+            if (write(mmap_info.fd, "", 1) == -1)
+                {
+                    std::cerr << "Error writing last byte of " << path << ": " << strerror(errno) << std::endl;
+                    close(mmap_info.fd);
+                    return false;
+                }
+        }
+
+    // mmap
+    int map_prot = create ? (PROT_WRITE | PROT_READ) : PROT_READ;
+    mmap_info.mapped_arr = reinterpret_cast<char *>(
+        mmap(NULL, mmap_info.length, map_prot, MAP_SHARED_VALIDATE, mmap_info.fd, 0));
+    if (mmap_info.mapped_arr == MAP_FAILED)
+        {
+            std::cerr << "Failed to mmap " << path << ": " << strerror(errno) << std::endl;
+            close(mmap_info.fd);
+            return false;
+        }
+
+    // initialize with spaces
+    if (create)
+        std::fill_n(mmap_info.mapped_arr, mmap_info.length, ' ');
+
+    return true;
+}
+

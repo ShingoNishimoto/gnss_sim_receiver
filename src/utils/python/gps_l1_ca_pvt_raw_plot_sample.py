@@ -30,6 +30,8 @@
  -----------------------------------------------------------------------------
 """
 
+from datetime import datetime, timedelta
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -40,8 +42,9 @@ from lib.plotNavigation import plotNavigation
 from lib.plotPosition import plot_oneVStime, plot_position
 from lib.plotVisibility import plotVisibility
 from lib.read_user_position import (batch_eci_to_rtn_full, ecef_to_eci_simple,
-                                    ecef_to_utm, get_interpolated_positions,
-                                    gps_to_gmst)
+                                    ecef_to_ecij2000, ecef_to_utm,
+                                    get_interpolated_positions, gps_to_gmst,
+                                    gps_to_utc)
 
 settings = {}
 
@@ -50,7 +53,11 @@ settings = {}
 # channels = 8
 is_GS = False
 dynamic = True
-gs_log_path = '/home/junichiro/work/gnss_sim_receiver/test/20250720165646/'
+full_ephemeris = False
+# gs_log_path = '/home/junichiro/work/gnss_sim_receiver/test/20250908123648/' # 2body
+# gs_log_path = '/home/junichiro/work/gnss_sim_receiver/test/20250909102229/' # 2body simple
+# gs_log_path = '/home/junichiro/work/gnss_sim_receiver/test/20250808101451/' # Full dynamics
+gs_log_path = '/home/junichiro/work/gnss_sim_receiver/test/20251012170235/'
 # gs_log_path = '/home/junichiro/Desktop/'
 if is_GS:
   path = gs_log_path
@@ -72,34 +79,35 @@ settings['navSolPeriod'] = nav_sol_period_ms
 
 navSolutions = gps_l1_ca_read_pvt_dump(pvt_raw_log_path)
 if dynamic:
-    true_position = get_interpolated_positions(user_states_file_path,
-                                               np.array(navSolutions['RxTime']) - np.array(navSolutions['dt']))
-    true_position_inertial = get_interpolated_positions(user_states_eci_file_path,
-                                               np.array(navSolutions['RxTime']) - np.array(navSolutions['dt']),
+  clock_offset = np.array(navSolutions['dt[s]'])
+  true_position = get_interpolated_positions(user_states_file_path,
+                                               np.array(navSolutions['RxTime']) - clock_offset)
+  true_position_inertial = get_interpolated_positions(user_states_eci_file_path,
+                                               np.array(navSolutions['RxTime']) - clock_offset,
                                                True)
 
-    # For debug
-    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 10), sharex=True)
+  # For debug
+  fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 10), sharex=True)
 
-    position_time = np.array(navSolutions['RxTime']) - np.array(navSolutions['dt'])
-    color = 'tab:blue'
-    ax1.set_xlabel('Time (s)')
-    ax1.set_ylabel('X (m)', color=color)
-    ax1.plot(position_time, true_position[0], color=color, label='X')
-    ax1.tick_params(axis='y', labelcolor=color)
-    ax1.set_title('SC position vs Time')
-    ax1.grid(True)
-    ax2.set_ylabel('Y (m)', color=color)
-    ax2.plot(position_time, true_position[1], color=color, label='Y')
-    ax2.tick_params(axis='y', labelcolor=color)
-    ax2.grid(True)
-    ax3.set_ylabel('Z (m)', color=color)
-    ax3.plot(position_time, true_position[2], color=color, label='Z')
-    ax3.tick_params(axis='y', labelcolor=color)
-    ax3.grid(True)
+  position_time = np.array(navSolutions['RxTime']) - clock_offset
+  color = 'tab:blue'
+  ax1.set_xlabel('Time (s)')
+  ax1.set_ylabel('X (m)', color=color)
+  ax1.plot(position_time, true_position[1], color=color, label='X')
+  ax1.tick_params(axis='y', labelcolor=color)
+  ax1.set_title('SC position vs Time')
+  ax1.grid(True)
+  ax2.set_ylabel('Y (m)', color=color)
+  ax2.plot(position_time, true_position[2], color=color, label='Y')
+  ax2.tick_params(axis='y', labelcolor=color)
+  ax2.grid(True)
+  ax3.set_ylabel('Z (m)', color=color)
+  ax3.plot(position_time, true_position[3], color=color, label='Z')
+  ax3.tick_params(axis='y', labelcolor=color)
+  ax3.grid(True)
 
-    plt.tight_layout()
-    plt.show()
+  plt.tight_layout()
+  plt.show()
 
 rotating_states_label = [
   'X_ECEF', 'Y_ECEF', 'Z_ECEF',
@@ -121,9 +129,9 @@ if is_GS:
   }
 else:
   if dynamic:
-    settings['true_position'] = { rotating_states_label[i]: true_position[i] for i in range(len(rotating_states_label)) }
+    settings['true_position'] = { rotating_states_label[i]: true_position[i + 1] for i in range(len(rotating_states_label)) }
     for i in range(len(inertial_states_label)):
-      settings['true_position'][inertial_states_label[i]] = true_position_inertial[i]
+      settings['true_position'][inertial_states_label[i]] = true_position_inertial[i + 1]
   else:
     settings['true_position'] = {
       'E_UTM':500000,'N_UTM':0,'U_UTM':4e8, 'X_ECEF':-287352736.0, 'Y_ECEF':287352736.0, 'Z_ECEF':0.0, 'lat': np.deg2rad(0), 'lon': np.deg2rad(135) # 0, 135, 4e8
@@ -149,7 +157,10 @@ if not dynamic:
   for i in range(3):
     settings['true_position'][rotating_states_label[3 + i]] = 0
 
-utm_position = ecef_to_utm(ecef_positions, true_position[0:3])
+if is_GS:
+  utm_position = ecef_to_utm(ecef_positions, true_position)
+else:
+  utm_position = ecef_to_utm(ecef_positions, true_position[1:4])
 E_UTM = utm_position[0]
 N_UTM = utm_position[1]
 # To avoid the discontinuity in UTM result TODO: for dynamic data.
@@ -176,8 +187,14 @@ if dynamic:
   t_offset = (gps_to_gmst(navSolutions['WEEK'][0], t0_gps) - t0_gmst) # in SI seconds
   omega_earth = 7.2921150e-5
   one_rev_periods = 2 * np.pi / omega_earth # Earth rotation period not one day.
-  t_gmst_solution = (gps_to_gmst(np.array(navSolutions['WEEK']), position_time) - t_offset) % one_rev_periods # in SI seconds
-  position_eci, velocity_eci = ecef_to_eci_simple(ecef_positions.T, ecef_velocities.T, t_gmst_solution)
+  if full_ephemeris:
+    t_utc_solution = (gps_to_utc(position_time - t_offset, np.array(navSolutions['WEEK'])))
+    position_eci, velocity_eci = ecef_to_ecij2000(ecef_positions.T, ecef_velocities.T, t_utc_solution)
+  else:
+    # t_gmst_solution = (gps_to_gmst(np.array(navSolutions['WEEK']), position_time) - t_offset) % one_rev_periods # in SI seconds
+    gmst_solution = true_position_inertial[0] # Use inertial one for more precision.
+    navSolutions['gmst[rad]'] = gmst_solution
+    position_eci, velocity_eci = ecef_to_eci_simple(ecef_positions.T, ecef_velocities.T, gmst_solution)
   for i in range(3):
     navSolutions[inertial_states_label[i]] = position_eci.T[i]
     navSolutions[inertial_states_label[3 + i]] = velocity_eci.T[i]
@@ -185,8 +202,8 @@ if dynamic:
   # ECI to RTN
   position_rtn, velocity_rtn = batch_eci_to_rtn_full(
     position_eci, velocity_eci,
-    true_position_inertial[0:3].T,
-    true_position_inertial[3:6].T
+    true_position_inertial[1:4].T,
+    true_position_inertial[4:7].T
     )
   rtn_label = [
     'R_RTN', 'T_RTN', 'N_RTN',

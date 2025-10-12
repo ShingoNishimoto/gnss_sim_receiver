@@ -1800,6 +1800,9 @@ bool Rtklib_Solver::get_PVT(const std::map<int, Gnss_Synchro> &gnss_observables_
                                     // User clock offset [s]
                                     tmp_double = rx_position_and_time[3];
                                     d_dump_file.write(reinterpret_cast<char *>(&tmp_double), sizeof(double));
+                                    // User clock drift [ppm]
+                                    tmp_double = clock_drift_ppm;
+                                    d_dump_file.write(reinterpret_cast<char *>(&tmp_double), sizeof(double));
 
                                     // ECEF POS X,Y,X [m] + ECEF VEL X,Y,X [m/s] (6 x double)
                                     tmp_double = pvt_sol.rr[0];
@@ -1827,6 +1830,20 @@ bool Rtklib_Solver::get_PVT(const std::map<int, Gnss_Synchro> &gnss_observables_
                                     tmp_double = pvt_sol.qr[4];
                                     d_dump_file.write(reinterpret_cast<char *>(&tmp_double), sizeof(double));
                                     tmp_double = pvt_sol.qr[5];
+                                    d_dump_file.write(reinterpret_cast<char *>(&tmp_double), sizeof(double));
+
+                                    // velocity variance/covariance ((m/s)^2) {c_xx,c_yy,c_zz} (3 x double)
+                                    tmp_double = pvt_sol.qv[0];
+                                    d_dump_file.write(reinterpret_cast<char *>(&tmp_double), sizeof(double));
+                                    tmp_double = pvt_sol.qv[1];
+                                    d_dump_file.write(reinterpret_cast<char *>(&tmp_double), sizeof(double));
+                                    tmp_double = pvt_sol.qv[2];
+                                    d_dump_file.write(reinterpret_cast<char *>(&tmp_double), sizeof(double));
+
+                                    // clock variance/covariance (m^2, (m/s)^2) {c_tt,c_dd} (2 x double)
+                                    tmp_double = pvt_sol.qt[0];
+                                    d_dump_file.write(reinterpret_cast<char *>(&tmp_double), sizeof(double));
+                                    tmp_double = pvt_sol.qt[1];
                                     d_dump_file.write(reinterpret_cast<char *>(&tmp_double), sizeof(double));
 
                                     // GEO user position Latitude [deg]
