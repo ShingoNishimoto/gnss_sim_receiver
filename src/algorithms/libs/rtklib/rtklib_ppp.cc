@@ -1890,6 +1890,8 @@ void pppos(rtk_t *rtk, const obsd_t *obs, int n, const nav_t *nav)
             rtk->sol.qr[5] = static_cast<float>(rtk->P[2]);
             rtk->sol.dtr[0] = rtk->x[IC_PPP(0, opt)];
             rtk->sol.dtr[1] = rtk->x[IC_PPP(1, opt)] - rtk->x[IC_PPP(0, opt)];
+            // TODO: check if its right
+            rtk->sol.qt[0] = static_cast<float>(rtk->P[3 * rtk->nx + 3]);
             for (i = 0; i < n && i < MAXOBS; i++)
                 {
                     rtk->ssat[obs[i].sat - 1].snr[0] = MIN_PPP(obs[i].SNR[0], obs[i].SNR[1]);

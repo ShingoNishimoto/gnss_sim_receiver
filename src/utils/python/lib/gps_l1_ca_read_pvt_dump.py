@@ -29,6 +29,8 @@ import struct
 
 import numpy as np
 
+pvt_old = False
+gs_old = False
 
 def gps_l1_ca_read_pvt_dump(filename):
 
@@ -42,6 +44,7 @@ def gps_l1_ca_read_pvt_dump(filename):
     WEEK =[]
     PVT_GPS_time = []
     Clock_Offset = []
+    Clock_Drift = []
     ECEF_X_POS = []
     ECEF_Y_POS = []
     ECEF_Z_POS = []
@@ -54,6 +57,11 @@ def gps_l1_ca_read_pvt_dump(filename):
     C_XY = []
     C_YZ = []
     C_ZX = []
+    C_VXX = []
+    C_VYY = []
+    C_VZZ = []
+    C_TT = []
+    C_DD = []
     Lat = []
     Long = []
     Height = []
@@ -92,6 +100,14 @@ def gps_l1_ca_read_pvt_dump(filename):
             Clock_Offset.append(struct.unpack('d',
                                               f.read(double_size_bytes))[0])
             bytes_shift += double_size_bytes
+            if pvt_old:
+                Clock_Drift.append(np.nan)
+            else:
+                f.seek(bytes_shift, 0)
+                # User_clock_drift -> [s/s] double
+                Clock_Drift.append(struct.unpack('d',
+                                                  f.read(double_size_bytes))[0])
+                bytes_shift += double_size_bytes
             f.seek(bytes_shift, 0)
             # ##### ECEF POS X,Y,X [m] + ECEF VEL X,Y,X [m/s] (6 x double) ######
             ECEF_X_POS.append(struct.unpack('d',
@@ -143,6 +159,37 @@ def gps_l1_ca_read_pvt_dump(filename):
             C_ZX.append(struct.unpack('d',
                                       f.read(double_size_bytes))[0])
             bytes_shift += double_size_bytes
+            if pvt_old or gs_old:
+                C_VXX.append(np.nan)
+                C_VYY.append(np.nan)
+                C_VZZ.append(np.nan)
+                C_TT.append(np.nan)
+                C_DD.append(np.nan)
+            else:
+                f.seek(bytes_shift, 0)
+                # #### Velocity variance/covariance [m/s²]
+                # {c_xx,c_yy,c_zz} (3 x double) ######
+                C_VXX.append(struct.unpack('d',
+                                        f.read(double_size_bytes))[0])
+                bytes_shift += double_size_bytes
+                f.seek(bytes_shift, 0)
+                C_VYY.append(struct.unpack('d',
+                                        f.read(double_size_bytes))[0])
+                bytes_shift += double_size_bytes
+                f.seek(bytes_shift, 0)
+                C_VZZ.append(struct.unpack('d',
+                                        f.read(double_size_bytes))[0])
+                bytes_shift += double_size_bytes
+                f.seek(bytes_shift, 0)
+                # #### Clock variance/covariance [m^2, (m/s)^2]
+                # {c_tt (offset), c_dd (drift)} (2 x double) ######
+                C_TT.append(struct.unpack('d',
+                                        f.read(double_size_bytes))[0])
+                bytes_shift += double_size_bytes
+                f.seek(bytes_shift, 0)
+                C_DD.append(struct.unpack('d',
+                                        f.read(double_size_bytes))[0])
+                bytes_shift += double_size_bytes
             f.seek(bytes_shift, 0)
             # GEO user position Latitude -> [deg] double
             Lat.append(struct.unpack('d',
@@ -219,7 +266,8 @@ def gps_l1_ca_read_pvt_dump(filename):
         'TOW': TOW,
         'WEEK': WEEK,
         'RxTime': PVT_GPS_time,
-        'dt': Clock_Offset,
+        'dt[s]': Clock_Offset,
+        'dt_dt[ppm]': Clock_Drift,
         'X': ECEF_X_POS,
         'Y': ECEF_Y_POS,
         'Z': ECEF_Z_POS,
@@ -233,6 +281,11 @@ def gps_l1_ca_read_pvt_dump(filename):
         'C_XY': C_XY,
         'C_YZ': C_YZ,
         'C_ZX': C_ZX,
+        'C_VXX': C_VXX,
+        'C_VYY': C_VYY,
+        'C_VZZ': C_VZZ,
+        'C_TT': C_TT,
+        'C_DD': C_DD,
         'latitude': Lat,
         'longitude': Long,
         'height': Height,

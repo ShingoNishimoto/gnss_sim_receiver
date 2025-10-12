@@ -844,6 +844,14 @@ int estpos(const obsd_t *obs, int n, const double *rs, const double *dts,
                             sol->qr[4] = static_cast<float>(Q[2 + nx]); /* cov yz */
                             sol->qr[5] = static_cast<float>(Q[2]);      /* cov zx */
                         }
+                    if (opt->clock_bias_fixed)
+                        {
+                            sol->qt[0] = 0;
+                        }
+                    else
+                        {
+                            sol->qt[0] = static_cast<float>(Q[3 + 3*nx]);
+                        }
                     sol->ns = static_cast<unsigned char>(ns);
                     sol->age = sol->ratio = 0.0;
 
@@ -886,7 +894,7 @@ int raim_fde(const obsd_t *obs, int n, const double *rs,
     double *azel, int *vsat, double *resp, char *msg)
 {
     obsd_t *obs_e;
-    sol_t sol_e = {{0, 0}, {}, {}, {}, '0', '0', '0', 0.0, 0.0, 0.0};
+    sol_t sol_e = {{0, 0}, {}, {}, {}, {}, {}, '0', '0', '0', 0.0, 0.0, 0.0};
     char tstr[32];
     char msg_e[128];
     double *rs_e;
@@ -1132,8 +1140,14 @@ void estvel(const obsd_t *obs, int n, const double *rs, const double *dts,
                     for (i = 0; i < 3; i++)
                         {
                             sol->rr[i + 3] = x[i];
+                            sol->qv[i] = static_cast<float>(Q[i * 4 + i]);
                         }
+                    sol->qv[3] = static_cast<float>(Q[1]);      /* cov xy */
+                    sol->qv[4] = static_cast<float>(Q[2 + 4]);  /* cov yz */
+                    sol->qv[5] = static_cast<float>(Q[2]);      /* cov zx */
+                    // NOTE: this is clock drift.
                     sol->dtr[5] = x[3];
+                    sol->qt[1] = static_cast<float>(Q[3 * 4 + 3]);
                     break;
                 }
         }
