@@ -510,6 +510,7 @@ int rescode(int iter, const obsd_t *obs, int n, const double *rs,
                 }
             /* pseudorange residual */
             v[nv] = P - (r + dtr - SPEED_OF_LIGHT_M_S * dts[i * 2] + dion + dtrp);
+            // v[nv] = P - (r + dtr + dion + dtrp);
 
             /* design matrix */
             for (j = 0; j < nx; j++)
@@ -734,6 +735,7 @@ int estpos(const obsd_t *obs, int n, const double *rs, const double *dts,
     int stat;
     int nv;
     int ns;
+    int start_iter;
     char msg_aux[128];
 
     trace(3, "estpos  : n=%d\n", n);
@@ -775,10 +777,12 @@ int estpos(const obsd_t *obs, int n, const double *rs, const double *dts,
             x[2] = pos(2);
         }
 
-    for (i = 0; i < MAXITR; i++)
+    // NOTE: For ionosphere OFF, start from 1 to avoid broadcasted ion correction being applied. Just valid for simulation. FIXME: both ionosphere and troposphere has a default correction. When ion and trop option differ, it does not work well.
+    start_iter = (opt->ionoopt == IONOOPT_OFF) ? 1 : 0;
+    for (i = start_iter; i < MAXITR + start_iter; i++)
         {
             /* pseudorange residuals */
-            nv = rescode(i, obs, n, rs, dts, vare, svh, nav, x, opt, v, H, var, azel, vsat, resp, &ns);
+            nv = rescode(i + start_iter, obs, n, rs, dts, vare, svh, nav, x, opt, v, H, var, azel, vsat, resp, &ns);
 
             if (nv < nx)
                 {
@@ -870,7 +874,7 @@ int estpos(const obsd_t *obs, int n, const double *rs, const double *dts,
                     return stat;
                 }
         }
-    if (i >= MAXITR)
+    if (i >= MAXITR + start_iter)
         {
             std::snprintf(msg_aux, sizeof(msg_aux), "iteration divergent i=%d", i);
         }
