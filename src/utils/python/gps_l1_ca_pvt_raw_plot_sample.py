@@ -51,13 +51,13 @@ settings = {}
 # ---------- CHANGE HERE:
 # samplingFreq = 3e6
 # channels = 8
-is_GS = False
-dynamic = True
+is_GS = True
+dynamic = False
 full_ephemeris = False
 # gs_log_path = '/home/junichiro/work/gnss_sim_receiver/test/20250908123648/' # 2body
 # gs_log_path = '/home/junichiro/work/gnss_sim_receiver/test/20250909102229/' # 2body simple
 # gs_log_path = '/home/junichiro/work/gnss_sim_receiver/test/20250808101451/' # Full dynamics
-gs_log_path = '/home/junichiro/work/gnss_sim_receiver/test/20251012170235/'
+gs_log_path = '/home/junichiro/work/gnss_sim_receiver/test/20260119125516/'
 # gs_log_path = '/home/junichiro/Desktop/'
 if is_GS:
   path = gs_log_path
@@ -124,6 +124,7 @@ inertial_states_label = [
 if is_GS:
   settings['true_position'] = {
     'E_UTM':500000,'N_UTM':0.0,'U_UTM':0, 'X_ECEF':-4510024, 'Y_ECEF':4510024, 'Z_ECEF':0.0, 'lat': np.deg2rad(0), 'lon': np.deg2rad(135) # 0, 135, 0
+    # 'E_UTM':485704.76,'N_UTM':4234453.69,'U_UTM':158.6, 'X_ECEF':-3888272, 'Y_ECEF':3167063, 'Z_ECEF':3928069, 'lat': np.deg2rad(38.257998389397734), 'lon': np.deg2rad(140.83660460172888) # CRESST (Tohoku Uni.)
     # 'E_UTM':690940.77,'N_UTM':6091664.70,'U_UTM':578.0, 'X_ECEF':-4472009, 'Y_ECEF':2676442, 'Z_ECEF':-3665415} # -35.3, 149.1, 578.0 (ANU)
     # 'E_UTM':500000,'N_UTM':3873043.06,'U_UTM':0, 'X_ECEF':-3698470, 'Y_ECEF':3698470, 'Z_ECEF':3637867} # 35, 135, 0
   }
@@ -157,7 +158,6 @@ if not dynamic:
   for i in range(3):
     settings['true_position'][rotating_states_label[3 + i]] = 0
 
-if is_GS:
   utm_position = ecef_to_utm(ecef_positions, true_position)
 else:
   utm_position = ecef_to_utm(ecef_positions, true_position[1:4])

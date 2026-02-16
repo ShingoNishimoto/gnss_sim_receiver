@@ -18,13 +18,16 @@ mkdir $date_str
 # set parameters manually. NOTE: SC came out from the lunar occultation 01:18 <- LLO
 # NOTE: user_motion_file should has the suffix of _ecef and _eci
 u_option="" # Ch1
-U_option="-U $confpath/../src/bladeGPS/lto_states_ecef.csv" # Ch2
-bladerfargs="-t 2024/01/15,01:00:00 -e $confpath/../src/bladeGPS/brdc0150.24n -d 4400 -l 0.0,135.0,0.0 $u_option $U_option -s ./$date_str/ -a -15 -r 0,90 -R 0,-90 -p -E -I"
+U_option="-U $confpath/../src/bladeGPS/llo_full_states_ecef.csv" # Ch2
+# U_option="-U $confpath/../src/bladeGPS/leo_full_states_ecef.csv" # Ch2
+bladerfargs="-t 2024/01/15,05:00:00 -e $confpath/../src/bladeGPS/brdc0150.24n -d 8000 -l 38.257998389397734,140.83660460172888,158.6 $u_option $U_option -s ./$date_str/ -a -15 -r 0,90 -R 0,-90 -p -E -I -f"
 # bladerfargs="-t 2024/01/15,01:00:00 -e $confpath/../src/bladeGPS/brdc0150.24n -d 86400 -l 0.0,135.0,0.0 -U ../src/bladeGPS/LLO_1818_1day.csv -s ./$date_str/ -a -15 -r 0,90 -R 0,-90 -p -E -I -f"
 
 ###
 # run
 # valgrind --tool=cachegrind gnss_sim_receiver \
+export SPICE_KERNEL_DIR="$HOME/work/cspice"
+# sudo -E taskset -c 1-3 chrt -f 95 \
 gnss_sim_receiver \
     --config_file=$conffile \
     --log_dir=$date_str \

@@ -30,21 +30,30 @@ inertial_frame_("J2000"),
 fixed_frame_("ITRF93"),
 body_name_("EARTH")
 {
-    // Load SPICE kernel
-    const char *home_dir = getenv("HOME");
-    if (home_dir == nullptr)
+    // // Load SPICE kernel
+    // const char *home_dir = getenv("HOME");
+    // if (home_dir == nullptr)
+    //     {
+    //         std::cerr << "HOME environment variable not set." << std::endl;
+    //     }
+    const char* spice_dir = getenv("SPICE_KERNEL_DIR");
+    if (!spice_dir)
         {
-            std::cerr << "HOME environment variable not set." << std::endl;
+            std::cerr << "SPICE_KERNEL_DIR is not set." << std::endl;
+            exit(1);
         }
-    furnsh_c((std::string(home_dir) + "/work/cspice/generic_kernels/spk/planets/de430.bsp").c_str());
-    furnsh_c((std::string(home_dir) + "/work/cspice/generic_kernels/lsk/naif0012.tls").c_str());
-    furnsh_c((std::string(home_dir) + "/work/cspice/generic_kernels/pck/earth_070425_370426_predict.bpc").c_str());
-    furnsh_c((std::string(home_dir) + "/work/cspice/generic_kernels/pck/earth_fixed.tf").c_str());
-    furnsh_c((std::string(home_dir) + "/work/cspice/generic_kernels/pck/gm_de431.tpc").c_str());
-    furnsh_c((std::string(home_dir) + "/work/cspice/generic_kernels/pck/moon_pa_de440_200625.bpc").c_str());
-    furnsh_c((std::string(home_dir) + "/work/cspice/generic_kernels/pck/moon_pa_de421_1900-2050.bpc").c_str());
-    furnsh_c((std::string(home_dir) + "/work/cspice/generic_kernels/fk/satellites/moon_080317.tf").c_str());
-    furnsh_c((std::string(home_dir) + "/work/cspice/generic_kernels/pck/pck00010.tpc").c_str());
+
+    std::string base = std::string(spice_dir) + "/generic_kernels/";
+
+    furnsh_c((base + "spk/planets/de430.bsp").c_str());
+    furnsh_c((base + "lsk/naif0012.tls").c_str());
+    furnsh_c((base + "pck/earth_070425_370426_predict.bpc").c_str());
+    furnsh_c((base + "pck/earth_fixed.tf").c_str());
+    furnsh_c((base + "pck/gm_de431.tpc").c_str());
+    furnsh_c((base + "pck/moon_pa_de440_200625.bpc").c_str());
+    furnsh_c((base + "pck/moon_pa_de421_1900-2050.bpc").c_str());
+    furnsh_c((base + "fk/satellites/moon_080317.tf").c_str());
+    furnsh_c((base + "pck/pck00010.tpc").c_str());
 
     // Update(initial_tt);
 }
@@ -52,20 +61,29 @@ body_name_("EARTH")
 CelestialBody::~CelestialBody()
 {
     // unload SPICE kernel
-    const char *home_dir = getenv("HOME");
-    if (home_dir == nullptr)
+    // const char *home_dir = getenv("HOME");
+    // if (home_dir == nullptr)
+    //     {
+    //         std::cerr << "HOME environment variable not set." << std::endl;
+    //     }
+    const char* spice_dir = getenv("SPICE_KERNEL_DIR");
+    if (!spice_dir)
         {
-            std::cerr << "HOME environment variable not set." << std::endl;
+            std::cerr << "SPICE_KERNEL_DIR is not set." << std::endl;
+            exit(1);
         }
-    unload_c((std::string(home_dir) + "/work/cspice/generic_kernels/spk/planets/de430.bsp").c_str());
-    unload_c((std::string(home_dir) + "/work/cspice/generic_kernels/lsk/naif0012.tls").c_str());
-    unload_c((std::string(home_dir) + "/work/cspice/generic_kernels/pck/earth_070425_370426_predict.bpc").c_str());
-    unload_c((std::string(home_dir) + "/work/cspice/generic_kernels/pck/earth_fixed.tf").c_str());
-    unload_c((std::string(home_dir) + "/work/cspice/generic_kernels/pck/gm_de431.tpc").c_str());
-    unload_c((std::string(home_dir) + "/work/cspice/generic_kernels/pck/moon_pa_de440_200625.bpc").c_str());
-    unload_c((std::string(home_dir) + "/work/cspice/generic_kernels/pck/moon_pa_de421_1900-2050.bpc").c_str());
-    unload_c((std::string(home_dir) + "/work/cspice/generic_kernels/fk/satellites/moon_080317.tf").c_str());
-    unload_c((std::string(home_dir) + "/work/cspice/generic_kernels/pck/pck00010.tpc").c_str());
+
+    std::string base = std::string(spice_dir) + "/generic_kernels/";
+
+    unload_c((base + "spk/planets/de430.bsp").c_str());
+    unload_c((base + "lsk/naif0012.tls").c_str());
+    unload_c((base + "pck/earth_070425_370426_predict.bpc").c_str());
+    unload_c((base + "pck/earth_fixed.tf").c_str());
+    unload_c((base + "pck/gm_de431.tpc").c_str());
+    unload_c((base + "pck/moon_pa_de440_200625.bpc").c_str());
+    unload_c((base + "pck/moon_pa_de421_1900-2050.bpc").c_str());
+    unload_c((base + "fk/satellites/moon_080317.tf").c_str());
+    unload_c((base + "pck/pck00010.tpc").c_str());
 }
 
 void CelestialBody::Update(double tt)
