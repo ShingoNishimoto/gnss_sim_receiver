@@ -13,11 +13,14 @@
 clearvars;
 close all;
 addpath('./libs');
-samplingFreq       = 25000000;     %[Hz]
-channels=10;
-path='/home/dmiralles/Documents/gnss-sdr/';
+samplingFreq       = 30000000;     %[Hz]
+channels=9;
+path='/home/junichiro/work/gnss_sim_receiver/test/';
 observables_log_path=[path 'observables.dat'];
 GNSS_observables= read_hybrid_observables_dump(channels,observables_log_path);
+writematrix(GNSS_observables.RX_time, [path 'rx_time.csv'], 'Delimiter', ',');
+writematrix(GNSS_observables.Pseudorange_m, [path 'pseudo_range.csv'], 'Delimiter', ',');
+writematrix(GNSS_observables.d_TOW_at_current_symbol, [path 'tow_current_symbol.csv'], 'Delimiter', ',');
 
 %% Plo data
 %--- optional: search all channels having good satellite simultaneously
@@ -33,7 +36,8 @@ end
 
 %--- plot observables from that index
 figure;
-plot(GNSS_observables.RX_time(obs_idx,min_tow_idx+1:end),GNSS_observables.Pseudorange_m(:,min_tow_idx+1:end)');
+scatter(GNSS_observables.RX_time(obs_idx,min_tow_idx+1:end),GNSS_observables.Pseudorange_m(:,min_tow_idx+1:end)');
+legend;
 grid on;
 xlabel('TOW [s]')
 ylabel('Pseudorange [m]');

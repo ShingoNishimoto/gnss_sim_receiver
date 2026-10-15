@@ -18,10 +18,11 @@ date_str="`date +'%Y%m%d%H%M%S'`"
 mkdir $date_str
 
 # set parameters manually.
-bladerfargs="-t 2024/01/15,01:00:00 -e $confpath/../src/bladeGPS/brdc0150.24n -d 3000 -l 0.0,135.0,0.0 -s ./$date_str/ -a 5 -r 0,90 -p -I -E -v"
+bladerfargs="-t 2024/01/15,01:00:00 -e $confpath/../src/bladeGPS/brdc0150.24n -d 3000 -l 0.0,135.0,0.0 -s ./$date_str/ -a 10 -r 0,90 -p -I -E -v"
 
 ###
 # run
+export SPICE_KERNEL_DIR="$HOME/work/cspice"
 gnss_sim_receiver \
     --config_file=$conffile \
     --log_dir=$date_str \

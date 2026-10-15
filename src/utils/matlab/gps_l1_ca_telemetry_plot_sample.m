@@ -13,20 +13,21 @@
 %
 
 close all;clear;
-samplingFreq       = 10000000;     %[Hz]
-channels=[0:17];
-path='/home/dmiralles/Documents/gnss-sdr/build/';
+samplingFreq       = 30000000;     %[Hz]
+channels=[0:8];
+path='/home/junichiro/work/gnss_sim_receiver/test/';
 addpath('libs/');
-clear PRN_absolute_sample_start;
+clear PRN_absolute_sample_start
 for N=1:1:length(channels)
     telemetry_log_path=[path 'telemetry' num2str(channels(N)) '.dat'];
-    GNSS_telemetry(N)= gps_l1_ca_read_telemetry_dump(telemetry_log_path);
+    % GNSS_telemetry(N)= gps_l1_ca_read_telemetry_dump(telemetry_log_path);
+    GNSS_telemetry= gps_l1_ca_read_telemetry_dump(telemetry_log_path);
 end
 
 %% Plotting values
 %--- Configurations
-chn_num_a = 11;
-chn_num_b = 3;
+chn_num_a = 8;
+chn_num_b = 1;
 %--- Plot results
 figure;
 plot(GNSS_telemetry(chn_num_a).tracking_sample_counter, ...
